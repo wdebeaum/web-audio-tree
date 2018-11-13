@@ -1,0 +1,58 @@
+input.label, input.value {
+  height: 2em;
+  padding: 0px;
+  border: 1px solid black;
+}
+
+.add-child {
+  color: yellow;
+  background-color: navy;
+  height: 2em;
+  border: 1px solid black;
+  box-sizing: content-box;
+}
+
+.add-child > option:first-child {
+  display: none;
+}
+
+button.close {
+  width: 2em;
+  height: 2em;
+  padding: 3px;
+  border: 1px solid black;
+  color: white;
+  background-color: red;
+}
+
+button.close:active {
+  background-color: black;
+}
+
+#start {
+  height: 2em;
+  padding: 3px;
+  border: 1px solid black;
+  color: black;
+  background-color: lime;
+}
+
+#templates {
+  display: none;
+}
+
+.audio-node, .reference {
+  background-color: #7f7fff;
+}
+
+.audio-node.source {
+  background-color: #cf7fff;
+}
+
+.k-rate {
+  background-color: #ffcf7f;
+}
+
+.a-rate {
+  background-color: #ffff7f;
+}

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="simple-tree/simple-tree.css">
+<link rel="stylesheet" href="wat.css">
+<title>Web Audio Tree</title>
+</head>
+<body>
+<h1>Web Audio Tree</h1>
+
+<ul class="children">
+ <li id="destination" class="subtree"><span class="node">AudioDestinationNode</span>
+  <input class="label" value="destination" disabled>
+  <button id="start">start</button>
+</ul>
+
+<div id="templates">
+<ul>
+ <li id="audio-node-template" class="audio-node subtree expanded"><span class="node"></span>
+  <input class="label" placeholder="label">
+  <select class="add-child" onchange="addChild(this)">
+   <option selected disabled>add child</option>
+   <option>reference</option>
+  </select>
+  <button class="close" onclick="deleteChild(this.parentNode)">×</button>
+  <ul class="children"></ul>
+ <li id="reference-template" class="reference subtree leaf"><span class="node">from</span>
+  <input class="label" placeholder="label">
+ <li id="audio-param-template" class="audio-param subtree expanded"><span class="node"></span>
+  <input class="value" placeholder="value">
+  <select class="add-child" onchange="addAutomation(this)">
+   <option selected disabled>add automation</option>
+   <option>setValueAtTime</option>
+   <option>linearRampToValueAtTime</option>
+   <option>exponentialRampToValueAtTime</option>
+   <option>setTargetAtTime</option>
+  </select>
+</ul>
+</div>
+
+<script type="text/javascript" src="simple-tree/simple-tree.js"></script>
+<script type="text/javascript" src="wat.js"></script>
+</body>
+</html>
