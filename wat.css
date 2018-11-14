@@ -29,6 +29,20 @@ button.close:active {
   background-color: black;
 }
 
+button.move {
+  width: 2em;
+  height: 2em;
+  padding: 3px;
+  border: 1px solid black;
+  color: yellow;
+  background-color: navy;
+}
+
+button.move:active {
+  color: navy;
+  background-color: yellow;
+}
+
 #start {
   height: 2em;
   padding: 3px;

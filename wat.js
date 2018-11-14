@@ -50,8 +50,15 @@ function initWebAudio() {
 	  // fill params
 	  for (var param in example) {
 	    if (example[param] instanceof AudioParam) {
+	      var automationRate = example[param].automationRate;
+	      if (!automationRate) { // some browsers don't do this, so fake it
+		automationRate =
+		  // defaults according to the spec
+		  (typeName == 'AudioBufferSourceNode' ||
+		   typeName == 'DynamicsCompressorNode') ? 'k-rate' : 'a-rate';
+	      }
 	      nodeTypes[typeName].params[param] = {
-		automationRate: (example[param].automationRate || 'k-rate'),
+		automationRate: automationRate,
 		defaultValue: example[param].defaultValue,
 		minValue: example[param].minValue,
 		maxValue: example[param].maxValue
@@ -152,7 +159,33 @@ function deleteChild(childSubtree) {
 function addAutomation(select) {
   var fnName = select.value;
   select.value = 'add automation';
-  // TODO
+  var children = select.parentNode.getElementsByClassName('children')[0];
+  var newChild = cloneNoID(document.getElementById(fnName + '-template'));
+  children.appendChild(newChild);
+}
+
+function moveAutomation(button) {
+  var li = button.parentNode;
+  var dir = button.innerText;
+  if (dir == '↑') {
+    console.log('up');
+    var prev = li.previousElementSibling;
+    console.log(prev);
+    if (prev) {
+      console.log('moving!');
+      li.parentNode.insertBefore(li, prev);
+    }
+  } else { // ↓
+    var next = li.nextElementSibling;
+    if (next) {
+      var nextNext = next.nextElementSibling;
+      if (nextNext) {
+	li.parentNode.insertBefore(li, nextNext);
+      } else {
+	li.parentNode.appendChild(li);
+      }
+    }
+  }
 }
 
 document.getElementById('start').onclick = function(evt) {

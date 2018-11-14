@@ -27,6 +27,8 @@
   <ul class="children"></ul>
  <li id="reference-template" class="reference subtree leaf"><span class="node">from</span>
   <input class="label" placeholder="label">
+  <button>pull here</button>
+  <button class="close" onclick="deleteChild(this.parentNode)">×</button>
  <li id="audio-param-template" class="audio-param subtree expanded"><span class="node"></span>
   <input class="value" placeholder="value">
   <select class="add-child" onchange="addAutomation(this)">
@@ -36,6 +38,27 @@
    <option>exponentialRampToValueAtTime</option>
    <option>setTargetAtTime</option>
   </select>
+ <li id="setValueAtTime-template" class="automation subtree leaf"><span class="node">setValueAtTime(</span><input class="label" placeholder="value">,
+  <input class="label" placeholder="start time">)
+  <button class="move" onclick="moveAutomation(this)">↑</button>
+  <button class="move" onclick="moveAutomation(this)">↓</button>
+  <button class="close" onclick="deleteChild(this.parentNode)">×</button>
+ <li id="linearRampToValueAtTime-template" class="automation subtree leaf"><span class="node">linearRampToValueAtTime(</span><input class="label" placeholder="value">,
+  <input class="label" placeholder="end time">)
+  <button class="move" onclick="moveAutomation(this)">↑</button>
+  <button class="move" onclick="moveAutomation(this)">↓</button>
+  <button class="close" onclick="deleteChild(this.parentNode)">×</button>
+ <li id="exponentialRampToValueAtTime-template" class="automation subtree leaf"><span class="node">exponentialRampToValueAtTime(</span><input class="label" placeholder="value">,
+  <input class="label" placeholder="end time">)
+  <button class="move" onclick="moveAutomation(this)">↑</button>
+  <button class="move" onclick="moveAutomation(this)">↓</button>
+  <button class="close" onclick="deleteChild(this.parentNode)">×</button>
+ <li id="setTargetAtTime-template" class="automation subtree leaf"><span class="node">setTargetAtTime(</span><input class="label" placeholder="target">,
+  <input class="label" placeholder="start time">,
+  <input class="label" placeholder="time constant">)
+  <button class="move" onclick="moveAutomation(this)">↑</button>
+  <button class="move" onclick="moveAutomation(this)">↓</button>
+  <button class="close" onclick="deleteChild(this.parentNode)">×</button>
 </ul>
 </div>
 
