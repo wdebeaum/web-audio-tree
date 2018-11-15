@@ -10,6 +10,26 @@ const nodeTypes = {
 
 var ctx;
 
+var tree = { // map IDs to data structures
+  destination: {
+    type: 'AudioDestinationNode',
+    params: {},
+    children: []
+  }
+};
+var nextID = 0;
+function getNextID() {
+  return 'wat-node-' + (nextID++);
+}
+
+// clone the given template node, but give it a new id attribute
+function cloneNewID(templateNode) {
+  var clone = templateNode.cloneNode(true);
+  clone.setAttribute('id', getNextID());
+  return clone;
+}
+
+// clone the given template node, but remove its id attribute
 function cloneNoID(templateNode) {
   var clone = templateNode.cloneNode(true);
   clone.removeAttribute('id');
@@ -108,10 +128,16 @@ function addChild(select) {
   var parentSubtree = select.parentNode
   var children = parentSubtree.querySelector('.children');
   var newChild;
+  var data = {
+    type: typeName,
+    params: {},
+    children: []
+  };
   if (typeName == 'reference') {
-    newChild = cloneNoID(document.getElementById('reference-template'));
+    newChild = cloneNewID(document.getElementById('reference-template'));
+    data.label = '';
   } else if (typeName in nodeTypes) {
-    newChild = cloneNoID(document.getElementById('audio-node-template'));
+    newChild = cloneNewID(document.getElementById('audio-node-template'));
     newChild.firstChild.innerHTML = typeName;
     if (nodeTypes[typeName].numberOfInputs == 0) { // can't add children
       newChild.getElementsByClassName('add-child')[0].remove();
@@ -137,7 +163,15 @@ function addChild(select) {
       }
     });
     paramNames.forEach(function(name) {
-      var param = cloneNoID(paramTemplate);
+      var param = cloneNewID(paramTemplate);
+      var paramData = {
+	type: 'AudioParam',
+	value: params[name].defaultValue,
+	automation: [],
+	children: []
+      };
+      tree[param.id] = paramData;
+      data.params[name] = paramData;
       param.firstChild.innerHTML = 'AudioParam ' + name + ' = ';
       param.classList.add(params[name].automationRate);
       param.getElementsByClassName('value')[0].value =
@@ -148,11 +182,30 @@ function addChild(select) {
     console.error("bogus add-child value " + typeName);
     return;
   }
+  tree[newChild.id] = data;
+  tree[parentSubtree.id].children.push(data);
   children.appendChild(newChild);
   updateSubtree(parentSubtree, true);
 }
 
 function deleteChild(childSubtree) {
+  var removeFromList;
+  if (childSubtree.matches('.audio-node')) {
+    removeFromList = 'children';
+  } else if (childSubtree.matches('.automation')) {
+    removeFromList = 'automation';
+  }
+  if (childSubtree.id && (childSubtree.id in tree)) {
+    if (removeFromList) {
+      var parentData = tree[childSubtree.parentNode.parentNode.id];
+      var childData = tree[childSubtree.id];
+      var i = parentData[removeFromList].indexOf(childData);
+      if (i >= 0) {
+	parentData[removeFromList].splice(i, 1);
+      }
+    }
+    delete tree[childSubtree.id];
+  }
   childSubtree.remove();
 }
 
@@ -160,20 +213,30 @@ function addAutomation(select) {
   var fnName = select.value;
   select.value = 'add automation';
   var children = select.parentNode.getElementsByClassName('children')[0];
-  var newChild = cloneNoID(document.getElementById(fnName + '-template'));
+  var newChild = cloneNewID(document.getElementById(fnName + '-template'));
   children.appendChild(newChild);
+  var numArgs = newChild.getElementsByTagName('input').length;
+  var childData = { fn: fnName, args: new Array(numArgs) };
+  tree[newChild.id] = childData;
+  tree[select.parentNode.id].automation.push(childData);
 }
 
 function moveAutomation(button) {
   var li = button.parentNode;
   var dir = button.innerText;
+  var data = tree[li.id];
+  var parentData = tree[li.parentNode.parentNode.id];
+  var i = parentData.automation.indexOf(data);
   if (dir == '↑') {
-    console.log('up');
     var prev = li.previousElementSibling;
     console.log(prev);
     if (prev) {
-      console.log('moving!');
       li.parentNode.insertBefore(li, prev);
+    }
+    if (i > 0) {
+      var tmp = parentData.automation[i];
+      parentData.automation[i] = parentData.automation[i-1];
+      parentData.automation[i-1] = tmp;
     }
   } else { // ↓
     var next = li.nextElementSibling;
@@ -184,8 +247,29 @@ function moveAutomation(button) {
       } else {
 	li.parentNode.appendChild(li);
       }
+      if (i >= 0 && i < parentData.automation.length - 1) {
+	var tmp = parentData.automation[i];
+	parentData.automation[i] = parentData.automation[i+1];
+	parentData.automation[i+1] = tmp;
+      }
     }
   }
+}
+
+function changeData(input) {
+  tree[input.parentNode.id][input.name] = input.value;
+}
+
+function changeArg(input) {
+  var i = 0;
+  var sib = input.previousElementSibling;
+  while (sib) {
+    if (sib.tagName == 'INPUT') {
+      i++;
+    }
+    sib = sib.previousElementSibling;
+  }
+  tree[input.parentNode.id].args[i] = input.value; // TODO? parse arithmetic expression involving variables v, o, r (note velocity, note onset time, note release time)
 }
 
 document.getElementById('start').onclick = function(evt) {
