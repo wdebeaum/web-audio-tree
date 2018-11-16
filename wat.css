@@ -31,6 +31,9 @@ button.close:active {
 
 button.move {
   width: 2em;
+}
+
+button.move, button.ref {
   height: 2em;
   padding: 3px;
   border: 1px solid black;
@@ -38,7 +41,7 @@ button.move {
   background-color: navy;
 }
 
-button.move:active {
+button.move:active, button.ref:active {
   color: navy;
   background-color: yellow;
 }

@@ -130,12 +130,12 @@ function addChild(select) {
   var newChild;
   var data = {
     type: typeName,
+    label: '',
     params: {},
     children: []
   };
   if (typeName == 'reference') {
     newChild = cloneNewID(document.getElementById('reference-template'));
-    data.label = '';
   } else if (typeName in nodeTypes) {
     newChild = cloneNewID(document.getElementById('audio-node-template'));
     newChild.firstChild.innerHTML = typeName;
@@ -182,6 +182,7 @@ function addChild(select) {
     console.error("bogus add-child value " + typeName);
     return;
   }
+  data.subtree = newChild;
   tree[newChild.id] = data;
   tree[parentSubtree.id].children.push(data);
   children.appendChild(newChild);
@@ -196,6 +197,20 @@ function deleteChild(childSubtree) {
     removeFromList = 'automation';
   }
   if (childSubtree.id && (childSubtree.id in tree)) {
+    if (tree[childSubtree.id].type != 'reference' &&
+        tree[childSubtree.id].label != '') {
+      // this child has a label and isn't itself a reference; check that there
+      // are no references to it, then delete it from its label
+      // FIXME actually, we need to check all the descendants too
+      for (var id in tree) {
+	if (tree[id].label == tree[childSubtree.id].label &&
+	    tree[id].type == 'reference') {
+	  alert('cannot delete node, there are still references to it');
+	  return;
+	}
+      }
+      delete tree[tree[childSubtree.id].label];
+    }
     if (removeFromList) {
       var parentData = tree[childSubtree.parentNode.parentNode.id];
       var childData = tree[childSubtree.id];
@@ -242,22 +257,60 @@ function moveAutomation(button) {
     var next = li.nextElementSibling;
     if (next) {
       var nextNext = next.nextElementSibling;
-      if (nextNext) {
-	li.parentNode.insertBefore(li, nextNext);
-      } else {
-	li.parentNode.appendChild(li);
-      }
-      if (i >= 0 && i < parentData.automation.length - 1) {
-	var tmp = parentData.automation[i];
-	parentData.automation[i] = parentData.automation[i+1];
-	parentData.automation[i+1] = tmp;
-      }
+      li.parentNode.insertBefore(li, nextNext);
+    }
+    if (i >= 0 && i < parentData.automation.length - 1) {
+      var tmp = parentData.automation[i];
+      parentData.automation[i] = parentData.automation[i+1];
+      parentData.automation[i+1] = tmp;
     }
   }
 }
 
 function changeData(input) {
-  tree[input.parentNode.id][input.name] = input.value;
+  var subtree = input.parentNode;
+  if (input.name == 'label') { // we're setting a label field
+    if (subtree.matches('.reference')) { // ... on a reference
+      // ensure that the new label actually refers to an existing node
+      if (!(input.value in tree)) {
+	alert('there is nothing labeled "' + input.value + '" to refer to');
+	input.value = oldLabel;
+	return;
+      }
+    } else { // setting a label field on a non-reference
+      // ensure that we can look up the data by its (nonempty) label in tree,
+      // and that any references to this node continue to reference this node
+      var data = tree[subtree.id];
+      var oldLabel = data.label;
+      var references = [];
+      if (oldLabel && oldLabel != '') {
+	for (var id in tree) {
+	  if (tree[id].type == 'reference' && tree[id].label == oldLabel) {
+	    references.push(tree[id]);
+	  }
+	}
+      }
+      if (input.value == '') {
+	if (references.length > 0) {
+	  alert('node is still referenced, cannot remove its label');
+	  input.value = oldLabel;
+	  return;
+	}
+      } else {
+	if (input.value in tree) {
+	  alert('there is already something labeled "' + input.value + '"');
+	  input.value = oldLabel;
+	  return;
+	}
+	tree[input.value] = data;
+      }
+      if (oldLabel && oldLabel != '') {
+	references.forEach(function(r) { r.label = input.value; });
+	delete tree[oldLabel];
+      }
+    }
+  }
+  tree[subtree.id][input.name] = input.value;
 }
 
 function changeArg(input) {
@@ -270,6 +323,31 @@ function changeArg(input) {
     sib = sib.previousElementSibling;
   }
   tree[input.parentNode.id].args[i] = input.value; // TODO? parse arithmetic expression involving variables v, o, r (note velocity, note onset time, note release time)
+}
+
+function moveHere(referenceSubtree) {
+  // variables here are named for the old state
+  var reference = tree[referenceSubtree.id];
+  var referent = tree[reference.label];
+  var referenceUL = referenceSubtree.parentNode;
+  var referentUL = referent.subtree.parentNode;
+  var referenceParent = tree[referenceUL.parentNode.id];
+  var referentParent = tree[referentUL.parentNode.id];
+  var referenceIndex = referenceParent.children.indexOf(reference);
+  var referentIndex = referentParent.children.indexOf(referent);
+  var referenceNext = referenceSubtree.nextElementSibling;
+  var referentNext = referent.subtree.nextElementSibling;
+  // swap the DOM nodes
+  referenceUL.insertBefore(referent.subtree, referenceNext);
+  referentUL.insertBefore(referenceSubtree, referentNext);
+  // swap the data
+  referenceParent.children[referenceIndex] = referent;
+  referentParent.children[referentIndex] = reference;
+}
+
+function copyHere(referenceSubtree) {
+  // TODO replace the reference with a copy of the referent, down to any labeled nodes, which become references to the originals instead of copies
+  // (do both DOM nodes and data)
 }
 
 document.getElementById('start').onclick = function(evt) {
