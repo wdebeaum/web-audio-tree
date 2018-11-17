@@ -469,6 +469,9 @@ function PlayingNote(frequency, velocity, onset) {
 	  that.referenceTasks.push(function() {
 	    that.audioNodes[nodeData.label].connect(toNode);
 	  });
+	},
+	disconnect: function() {
+	  that.audioNodes[nodeData.label].disconnect();
 	}
       };
     } else { // ordinary AudioNode

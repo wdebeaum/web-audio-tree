@@ -58,7 +58,7 @@ button.move:active, button.ref:active {
   display: none;
 }
 
-.audio-node, .reference {
+.audio-node {
   background-color: #7f7fff;
 }
 
