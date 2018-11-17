@@ -41,7 +41,12 @@ function cloneNoID(templateNode) {
 }
 
 function initWebAudio() {
-  ctx = new AudioContext();
+  if ('function' != typeof AudioContext) {
+    console.log('Web Audio API not supported in this browser.');
+    document.getElementById('web-audio-status').classList.replace('unknown', 'unsupported');
+    return;
+  }
+  ctx = new AudioContext({ latencyHint: 'interactive' });
 
   // fill nodeTypes by inspecting BaseAudioContext and example nodes created
   // using ctx
@@ -124,6 +129,58 @@ function initWebAudio() {
   ul.className = 'children';
   apt.appendChild(ul);
   apt.classList.replace('leaf', 'expanded');
+
+  document.getElementById('web-audio-status').classList.replace('unknown', 'supported');
+}
+
+var note2osc = {};
+
+function initWebMIDI() {
+  if ('function' != typeof navigator.requestMIDIAccess) {
+    console.log('Web MIDI API not supported in this browser.');
+    document.getElementById('web-midi-status').classList.replace('unknown', 'unsupported');
+    return;
+  }
+  navigator.requestMIDIAccess({ sysex: false, software: false }).
+  then(function(midiAccess) {
+    // get the first MIDI input port
+    var inputPort;
+    midiAccess.inputs.forEach(function(port, key) {
+      if (!inputPort) {
+	inputPort = port;
+      }
+    });
+    if (!inputPort) {
+      console.log('no MIDI input ports found.');
+      return;
+    }
+    inputPort.onmidimessage = function(evt) {
+      try {
+	//console.log(evt.data);
+	if (evt.data.length == 3) {
+	  var cmd = evt.data[0] >> 4;
+	  var noteNum = evt.data[1];
+	  var velocity = evt.data[2];
+	  if (cmd == 8 || // note off
+	      (cmd == 9 && velocity == 0)) { // note on with vel 0 (i.e. off)
+	    //console.log({ note: 'off', num: noteNum });
+	    if (note2osc[noteNum]) {
+	      note2osc[noteNum].release(ctx.currentTime);
+	    }
+	  } else if (cmd == 9) { // note on
+	    //console.log({ note: 'on', num: noteNum, vel: velocity });
+	    if (note2osc[noteNum]) {
+	      note2osc[noteNum].end();
+	    }
+	    note2osc[noteNum] = noteNumToStartedOscillator(noteNum, velocity);
+	  }
+	}
+      } catch (e) {
+	console.error(e);
+      }
+    };
+    document.getElementById('web-midi-status').classList.replace('unknown', 'supported');
+  });
 }
 
 /*
@@ -257,7 +314,6 @@ function moveAutomation(button) {
   var i = parentData.automation.indexOf(data);
   if (dir == '↑') {
     var prev = li.previousElementSibling;
-    console.log(prev);
     if (prev) {
       li.parentNode.insertBefore(li, prev);
     }
@@ -380,6 +436,7 @@ function copyHere(referenceSubtree) {
 document.getElementById('start').onclick = function(evt) {
   evt.currentTarget.remove();
   initWebAudio();
+  initWebMIDI();
 }
 
 /*
@@ -477,12 +534,15 @@ function PlayingNote(frequency, velocity, onset) {
 
 ].forEach(function(fn) { PlayingNote.prototype[fn.name] = fn; });
 
-function noteNumToStartedOscillator(noteNum) {
+function noteNumToStartedOscillator(noteNum, velocity) {
+  if (velocity === undefined) {
+    velocity = 1;
+  }
   // TODO make octave changeable
   var fractionOfMiddleC = Math.pow(2.0, (0 + noteNum - 72) / 12) * 2;
   var frequency = fractionOfMiddleC * 440;
-  console.log('start oscillator at ' + frequency + ' Hz');
-  return new PlayingNote(frequency, 1, ctx.currentTime);
+  //console.log('start oscillator at ' + frequency + ' Hz');
+  return new PlayingNote(frequency, velocity, ctx.currentTime);
 }
 
 /*
@@ -565,12 +625,12 @@ document.getElementById('keyboard').onmousedown = function(evt) {
   var td = evt.target;
   if (td.matches('.b, .w')) {
     var noteNum = evt.target.className.slice(0,2);
-    td.classList.add('keydown');
     mouseOscillator = noteNumToStartedOscillator(noteNum);
     mouseOscillator.onended =
       function () {
 	td.classList.remove('keydown');
       }
+    setTimeout(function() { td.classList.add("keydown"); }, 0);
   }
   evt.preventDefault();
 };
@@ -588,20 +648,20 @@ forEach(function(td) {
     if (mouseButtonIsDown) {
       if (td.matches('.b, .w')) {
 	var noteNum = td.className.slice(0,2);
-	td.classList.add('keydown');
 	mouseOscillator = noteNumToStartedOscillator(noteNum);
-	console.log("enter " + mouseOscillator.vars.f);
+	//console.log("enter " + mouseOscillator.vars.f);
 	mouseOscillator.onended =
 	  function () {
 	    td.classList.remove('keydown');
 	  }
+	setTimeout(function() { td.classList.add("keydown"); }, 0);
       }
     }
     evt.preventDefault();
   };
   td.onmouseleave = function(evt) {
     if (mouseOscillator) {
-      console.log("leave " + mouseOscillator.vars.f);
+      //console.log("leave " + mouseOscillator.vars.f);
       mouseOscillator.release(ctx.currentTime);
       mouseOscillator = null;
     }

@@ -124,3 +124,29 @@ table#keyboard td[colspan="3"] { width: 2.25em; }
 table#keyboard td[colspan="4"] { width: 4em; }
 table#keyboard td[colspan="5"] { width: 4.75em; }
 table#keyboard td[colspan="14"] { width: 10.5em; }
+
+ul.status {
+  list-style-type: none;
+  padding-left: 0px;
+}
+
+ul.status > li::before {
+  font-weight: bold;
+  margin-left: 0.2em;
+  margin-right: 0.2em;
+}
+
+ul.status > li.unknown::before {
+  content: '?';
+  color: #7f7f00;
+}
+
+ul.status > li.unsupported::before {
+  content: '✗';
+  color: #7f0000;
+}
+
+ul.status > li.supported::before {
+  content: '✓';
+  color: #007f00;
+}
