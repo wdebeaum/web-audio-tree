@@ -128,6 +128,8 @@ table#keyboard td[colspan="14"] { width: 10.5em; }
 ul.status {
   list-style-type: none;
   padding-left: 0px;
+  margin-top: 0px;
+  float: right;
 }
 
 ul.status > li::before {
