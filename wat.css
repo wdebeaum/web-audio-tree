@@ -73,3 +73,54 @@ button.move:active, button.ref:active {
 .a-rate {
   background-color: #ffff7f;
 }
+
+table#keyboard {
+  font-size: small;
+}
+
+table#keyboard td {
+  border-width: 3px;
+  border-style: solid;
+  border-top-color: #888;
+  border-left-color: #888;
+  border-bottom-color: #333;
+  border-right-color: #333;
+  height: 1.5em;
+  text-align: center;
+  color: #444;
+  background-color: #666;
+}
+
+table#keyboard td.w {
+  border-top-color: #ddb;
+  border-left-color: #ddb;
+  border-bottom-color: #886;
+  border-right-color: #886;
+  color: #000;
+  background-color: #ffd;
+}
+
+table#keyboard td.b {
+  border-top-color: #555;
+  border-left-color: #555;
+  border-bottom-color: #000;
+  border-right-color: #000;
+  color: #eee;
+  background-color: #111;
+}
+
+table#keyboard td.keydown {
+  border-top-color: #8f8;
+  border-left-color: #8f8;
+  border-bottom-color: #080;
+  border-right-color: #080;
+  color: #ff0;
+  background-color: #0f0;
+}
+
+table#keyboard td[colspan="1"] { width: 0.75em; }
+table#keyboard td[colspan="2"] { width: 1.5em; }
+table#keyboard td[colspan="3"] { width: 2.25em; }
+table#keyboard td[colspan="4"] { width: 4em; }
+table#keyboard td[colspan="5"] { width: 4.75em; }
+table#keyboard td[colspan="14"] { width: 10.5em; }

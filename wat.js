@@ -1,3 +1,7 @@
+/*
+ * Initialization
+ */
+
 initTrees();
 
 const nodeTypes = {
@@ -61,7 +65,7 @@ function initWebAudio() {
 	  if (!(example instanceof window[typeName])) { continue; }
 	  // if it is, make an entry in nodeTypes
 	  nodeTypes[typeName] = {
-	    create: v,
+	    create: k,
 	    isScheduled: (example instanceof AudioScheduledSourceNode),
 	    numberOfInputs: example.numberOfInputs,
 	    numberOfOutputs: example.numberOfOutputs,
@@ -121,6 +125,10 @@ function initWebAudio() {
   apt.appendChild(ul);
   apt.classList.replace('leaf', 'expanded');
 }
+
+/*
+ * Tree UI
+ */
 
 function addChild(select) {
   var typeName = select.value;
@@ -322,7 +330,7 @@ function changeArg(input) {
     }
     sib = sib.previousElementSibling;
   }
-  tree[input.parentNode.id].args[i] = input.value; // TODO? parse arithmetic expression involving variables v, o, r (note velocity, note onset time, note release time)
+  tree[input.parentNode.id].args[i] = input.value; // TODO? parse arithmetic expression involving variables f, v, o, r (note frequency, note velocity, note onset time, note release time)
 }
 
 function moveHere(referenceSubtree) {
@@ -354,3 +362,244 @@ document.getElementById('start').onclick = function(evt) {
   evt.currentTarget.remove();
   initWebAudio();
 }
+
+/*
+ * Playing note
+ */
+
+function PlayingNote(frequency, velocity, onset) {
+  this.vars = { f: frequency, v: velocity, o: onset }; // no release yet
+  this.audioNodes = {}; // by label
+  this.scheduledNodes = [];
+  this.referenceTasks = []; // functions to be called to connect references
+  this.releaseTasks = []; // functions to be called when we know release time
+  this.topNodes =
+    tree.destination.children.map(this.instantiateNode.bind(this));
+  this.topNodes.forEach(function(n) {
+    n.connect(ctx.destination);
+  });
+  this.referenceTasks.forEach(function(fn) { fn(); });
+  // TODO make start/end scheduling configurable?
+  this.scheduledNodes.forEach(function(n) { n.start(onset); });
+}
+
+[ // begin PlayingNote methods
+
+  function instantiateNode(nodeData) {
+    if (nodeData.type == 'reference') {
+      var that = this;
+      return {
+	connect: function(toNode) {
+	  that.referenceTasks.push(function() {
+	    that.audioNodes[nodeData.label].connect(toNode);
+	  });
+	}
+      };
+    } else { // ordinary AudioNode
+      var typeData = nodeTypes[nodeData.type]
+      var audioNode = ctx[typeData.create]();
+      if (nodeData.label != '') {
+	this.audioNodes[nodeData.label] = audioNode;
+      }
+      if (typeData.isScheduled) {
+	this.scheduledNodes.push(audioNode);
+      }
+      for (var paramName in nodeData.params) {
+	this.instantiateParam(audioNode, paramName, nodeData.params[paramName]);
+      }
+      nodeData.children.forEach(function(c) {
+	this.instantiateNode(c).connect(audioNode);
+      }, this);
+      return audioNode;
+    }
+  },
+
+  function instantiateParam(audioNode, paramName, paramData) {
+    var audioParam = audioNode[paramName];
+    if (paramData.value != '') {
+      audioParam.value = this.evaluate(paramData.value);
+    }
+    paramData.automation.forEach(function(a) {
+      // push anything that needs r onto releaseTasks; schedule everything else
+      // immediately
+      if (a.args.some(function(arg) { return /r/.test(arg); })) {
+	var that = this;
+	this.releaseTasks.push(function() {
+	  that.instantiateAutomation(audioParam, a);
+	});
+      } else {
+	this.instantiateAutomation(audioParam, a);
+      }
+    }, this);
+    paramData.children.forEach(function(c) {
+      this.instantiateNode(c).connect(audioParam);
+    }, this);
+  },
+
+  function instantiateAutomation(audioParam, autoData) {
+    audioParam[autoData.fn].apply(audioParam, autoData.args.map(this.evaluate.bind(this)));
+  },
+
+  function release(releaseTime) {
+    this.vars.r = releaseTime;
+    this.releaseTasks.forEach(function(fn) { fn(); });
+    // FIXME: this isn't quite right; we should only call end after the note has finished sounding, but release does not necessarily immediately stop the note from sounding
+    this.end();
+  },
+
+  function end() {
+    this.scheduledNodes.forEach(function(n) { n.stop(); });
+    this.topNodes.forEach(function(n) { n.disconnect(); });
+    if ('function' == typeof this.onended) {
+      this.onended();
+    }
+  },
+
+  // evaluate an arithmetic expression involving this.vars
+  function evaluate(str) {
+    // TODO!!! validate str
+    return eval(
+      "(function() {\n" +
+	"  var " +
+	  Object.keys(this.vars).
+	  map(function(k) { return k + ' = ' + this.vars[k]; }, this).
+	  join(', ') +
+	  ";\n" +
+	"return (" + str + ");\n" +
+      "})()"
+    );
+  }
+
+].forEach(function(fn) { PlayingNote.prototype[fn.name] = fn; });
+
+function noteNumToStartedOscillator(noteNum) {
+  // TODO make octave changeable
+  var fractionOfMiddleC = Math.pow(2.0, (0 + noteNum - 72) / 12) * 2;
+  var frequency = fractionOfMiddleC * 440;
+  console.log('start oscillator at ' + frequency + ' Hz');
+  return new PlayingNote(frequency, 1, ctx.currentTime);
+}
+
+/*
+ * Keyboard
+ * (largely borrowed from music-cad)
+ */
+
+function isAsciiKeyCode(code) {
+  return ((code >= 48 && code <= 59) || (code >= 65 && code <= 90));
+}
+
+var tds = document.getElementsByTagName("td");
+document.querySelectorAll('table#keyboard td.w, table#keyboard td.b').
+forEach(function(td, i) {
+  var content = td.innerHTML;
+  if (content.length == 1) {
+    var code = content.toUpperCase().charCodeAt(0);
+    if (isAsciiKeyCode(code)) {
+      td.setAttribute("id", "key_" + code);
+    } else if (content == ',') {
+      td.setAttribute("id", "key_188");
+    } else if (content == '.') {
+      td.setAttribute("id", "key_190");
+    } else if (content == '/') {
+      td.setAttribute("id", "key_191");
+    }
+  }
+});
+
+var kc2osc = {};
+
+function standardKeyCode(evt) {
+  var code = evt.keyCode;
+  if (code == 186) { // Firefox and Chrome can't agree on ";"
+    code = 59;
+  }
+  return code;
+}
+
+// activated by the actual keyboard
+
+document.body.onkeydown = function(evt) {
+  if (document.activeElement.tagName != 'INPUT') {
+    var code = standardKeyCode(evt);
+    var td = document.getElementById("key_" + code);
+    if (td) {
+      if (!kc2osc[code]) {
+	var noteNum = td.className.slice(0,2);
+	td.classList.add("keydown");
+	if (/\d\d/.test(noteNum)) {
+	  kc2osc[code] = noteNumToStartedOscillator(noteNum);
+	}
+      }
+      evt.preventDefault();
+    }
+  }
+};
+
+document.body.onkeyup = function(evt) {
+  var code = standardKeyCode(evt);
+  var td = document.getElementById("key_" + code);
+  if (td) {
+    td.classList.remove("keydown");
+    var oscillator = kc2osc[code];
+    if (oscillator) {
+      oscillator.release(ctx.currentTime);
+      kc2osc[code] = null;
+    }
+    evt.preventDefault();
+  }
+};
+
+// activated by clicking on the on-screen keyboard
+
+var mouseOscillator;
+var mouseButtonIsDown;
+
+document.getElementById('keyboard').onmousedown = function(evt) {
+  mouseButtonIsDown = true;
+  var td = evt.target;
+  if (td.matches('.b, .w')) {
+    var noteNum = evt.target.className.slice(0,2);
+    td.classList.add('keydown');
+    mouseOscillator = noteNumToStartedOscillator(noteNum);
+    mouseOscillator.onended =
+      function () {
+	td.classList.remove('keydown');
+      }
+  }
+  evt.preventDefault();
+};
+
+document.getElementById('keyboard').onmouseup = function(evt) {
+  mouseButtonIsDown = false;
+  mouseOscillator.release(ctx.currentTime);
+  mouseOscillator = null;
+  evt.preventDefault();
+};
+
+document.querySelectorAll('#keyboard td').
+forEach(function(td) {
+  td.onmouseenter = function(evt) {
+    if (mouseButtonIsDown) {
+      if (td.matches('.b, .w')) {
+	var noteNum = td.className.slice(0,2);
+	td.classList.add('keydown');
+	mouseOscillator = noteNumToStartedOscillator(noteNum);
+	console.log("enter " + mouseOscillator.vars.f);
+	mouseOscillator.onended =
+	  function () {
+	    td.classList.remove('keydown');
+	  }
+      }
+    }
+    evt.preventDefault();
+  };
+  td.onmouseleave = function(evt) {
+    if (mouseOscillator) {
+      console.log("leave " + mouseOscillator.vars.f);
+      mouseOscillator.release(ctx.currentTime);
+      mouseOscillator = null;
+    }
+    evt.preventDefault();
+  };
+});
