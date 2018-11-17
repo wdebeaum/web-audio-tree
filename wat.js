@@ -175,6 +175,7 @@ function addChild(select) {
       var paramData = {
 	type: 'AudioParam',
 	value: params[name].defaultValue,
+	valueFn: function() { return this.value; },
 	automation: [],
 	children: []
       };
@@ -239,7 +240,11 @@ function addAutomation(select) {
   var newChild = cloneNewID(document.getElementById(fnName + '-template'));
   children.appendChild(newChild);
   var numArgs = newChild.getElementsByTagName('input').length;
-  var childData = { fn: fnName, args: new Array(numArgs) };
+  var childData = {
+    fn: fnName,
+    args: new Array(numArgs),
+    argFns: new Array(numArgs)
+  };
   tree[newChild.id] = childData;
   tree[select.parentNode.id].automation.push(childData);
 }
@@ -319,6 +324,14 @@ function changeData(input) {
     }
   }
   tree[subtree.id][input.name] = input.value;
+  if (input.name == 'value') {
+    // TODO!!! validate input.value before passing to eval
+    tree[subtree.id].valueFn = eval(
+      "(function({ f, v, o, r }) {\n" +
+      "  return (" + input.value + ");\n" +
+      "})\n"
+    );
+  }
 }
 
 function changeArg(input) {
@@ -330,7 +343,13 @@ function changeArg(input) {
     }
     sib = sib.previousElementSibling;
   }
-  tree[input.parentNode.id].args[i] = input.value; // TODO? parse arithmetic expression involving variables f, v, o, r (note frequency, note velocity, note onset time, note release time)
+  tree[input.parentNode.id].args[i] = input.value;
+  // TODO!!! validate input.value before passing to eval
+  tree[input.parentNode.id].argFns[i] = eval(
+    "(function({ f, v, o, r }) {\n" +
+    "  return (" + input.value + ");\n" +
+    "})\n"
+  );
 }
 
 function moveHere(referenceSubtree) {
@@ -417,11 +436,12 @@ function PlayingNote(frequency, velocity, onset) {
   function instantiateParam(audioNode, paramName, paramData) {
     var audioParam = audioNode[paramName];
     if (paramData.value != '') {
-      audioParam.value = this.evaluate(paramData.value);
+      audioParam.value = paramData.valueFn(this.vars);
     }
     paramData.automation.forEach(function(a) {
       // push anything that needs r onto releaseTasks; schedule everything else
       // immediately
+      // TODO? only schedule events that happen at onset immediately; do later events in setTimeout(fn,0) to avoid delaying calls to .start() (not sure how much this matters; probably happens internal to these automation methods anyway)
       if (a.args.some(function(arg) { return /r/.test(arg); })) {
 	var that = this;
 	this.releaseTasks.push(function() {
@@ -437,7 +457,7 @@ function PlayingNote(frequency, velocity, onset) {
   },
 
   function instantiateAutomation(audioParam, autoData) {
-    audioParam[autoData.fn].apply(audioParam, autoData.args.map(this.evaluate.bind(this)));
+    audioParam[autoData.fn].apply(audioParam, autoData.argFns.map(function(fn) { return fn(this.vars); }, this));
   },
 
   function release(releaseTime) {
@@ -454,21 +474,6 @@ function PlayingNote(frequency, velocity, onset) {
       this.onended();
     }
   },
-
-  // evaluate an arithmetic expression involving this.vars
-  function evaluate(str) {
-    // TODO!!! validate str
-    return eval(
-      "(function() {\n" +
-	"  var " +
-	  Object.keys(this.vars).
-	  map(function(k) { return k + ' = ' + this.vars[k]; }, this).
-	  join(', ') +
-	  ";\n" +
-	"return (" + str + ");\n" +
-      "})()"
-    );
-  }
 
 ].forEach(function(fn) { PlayingNote.prototype[fn.name] = fn; });
 
@@ -526,10 +531,10 @@ document.body.onkeydown = function(evt) {
     if (td) {
       if (!kc2osc[code]) {
 	var noteNum = td.className.slice(0,2);
-	td.classList.add("keydown");
 	if (/\d\d/.test(noteNum)) {
 	  kc2osc[code] = noteNumToStartedOscillator(noteNum);
 	}
+	setTimeout(function() { td.classList.add("keydown"); }, 0);
       }
       evt.preventDefault();
     }
@@ -540,12 +545,12 @@ document.body.onkeyup = function(evt) {
   var code = standardKeyCode(evt);
   var td = document.getElementById("key_" + code);
   if (td) {
-    td.classList.remove("keydown");
     var oscillator = kc2osc[code];
     if (oscillator) {
       oscillator.release(ctx.currentTime);
       kc2osc[code] = null;
     }
+    setTimeout(function() { td.classList.remove("keydown"); }, 0);
     evt.preventDefault();
   }
 };
