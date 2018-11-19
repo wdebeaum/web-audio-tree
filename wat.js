@@ -261,6 +261,12 @@ function initWebMIDI() {
   });
 }
 
+document.getElementById('start').onclick = function(evt) {
+  evt.currentTarget.remove();
+  initWebAudio();
+  initWebMIDI();
+}
+
 /*
  * Tree UI
  */
@@ -274,6 +280,7 @@ function addChild(select) {
   var data = {
     type: typeName,
     label: '',
+    fields: {},
     params: {},
     children: []
   };
@@ -293,6 +300,14 @@ function addChild(select) {
       var type = fields[name].type;
       var fieldTemplate = document.getElementById(type + '-field-template');
       var field = cloneNewID(fieldTemplate);
+      data.fields[name] = {
+	type: type,
+	value: nodeTypes[typeName].fields[name].defaultValue,
+	valueFn: function() { return this.value; }
+      };
+      if ('set' in nodeTypes[typeName].fields[name]) {
+	data.fields[name].set = nodeTypes[typeName].fields[name].set;
+      }
       if (type != 'PeriodicWave') {
 	field.querySelector('span.node').innerHTML = type + ' ' + name + ' = ';
       }
@@ -324,7 +339,13 @@ function addChild(select) {
 	case 'PeriodicWave':
 	  field.querySelector('.PeriodicWave-row').remove();
 	  break;
-	// AudioBuffer and Float32Array have no defaults or special handling
+	case 'Float32Array':
+	  var input = field.querySelector('input');
+	  input.name = name;
+	  break;
+	case 'AudioBuffer':
+	  // nothing?
+	  break;
       }
       grandkids.appendChild(field);
     });
@@ -509,7 +530,24 @@ function changeLabel(input) {
 }
 
 function changeFieldValue(input) {
-  // TODO
+  var subtree = input.parentNode.parentNode.parentNode;
+  var field = tree[subtree.id].fields[input.name];
+  switch (field.type) {
+    case 'boolean':
+      field.value = input.checked;
+      break;
+    case 'number':
+      field.value = input.value;
+      field.valueFn = makeValueFn(input.value);
+      break;
+    case 'enum':
+      field.value = input.value;
+      break;
+    case 'Float32Array':
+      field.value = input.value;
+      field.valueFn = makeValueFn('Float32Array.from([' + input.value + '])');
+      break;
+  }
 }
 
 function changeParamValue(input) {
@@ -570,12 +608,6 @@ function stopRecordingBuffer(button) {
   // TODO
 }
 
-document.getElementById('start').onclick = function(evt) {
-  evt.currentTarget.remove();
-  initWebAudio();
-  initWebMIDI();
-}
-
 /*
  * Playing note
  */
@@ -619,6 +651,17 @@ function PlayingNote(frequency, velocity, onset) {
       }
       if (typeData.isScheduled) {
 	this.scheduledNodes.push(audioNode);
+      }
+      for (var fieldName in nodeData.fields) {
+	var field = nodeData.fields[fieldName];
+	var val = field.valueFn(this.vars);
+	if ('set' in field) {
+	  if (val !== undefined) {
+	    audioNode[field.set](val);
+	  }
+	} else {
+	  audioNode[fieldName] = val;
+	}
       }
       for (var paramName in nodeData.params) {
 	this.instantiateParam(audioNode, paramName, nodeData.params[paramName]);
