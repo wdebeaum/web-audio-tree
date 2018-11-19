@@ -74,11 +74,14 @@ function initWebAudio() {
 	    isScheduled: (example instanceof AudioScheduledSourceNode),
 	    numberOfInputs: example.numberOfInputs,
 	    numberOfOutputs: example.numberOfOutputs,
-	    params: {}
+	    params: {},
+	    fields: {}
 	  };
-	  // fill params
+	  // fill params and fields
 	  for (var param in example) {
-	    if (example[param] instanceof AudioParam) {
+	    if (param in AudioScheduledSourceNode.prototype) {
+	      // skip generic fields/methods
+	    } else if (example[param] instanceof AudioParam) {
 	      var automationRate = example[param].automationRate;
 	      if (!automationRate) { // some browsers don't do this, so fake it
 		automationRate =
@@ -92,7 +95,82 @@ function initWebAudio() {
 		minValue: example[param].minValue,
 		maxValue: example[param].maxValue
 	      };
-	    } // TODO handle other non-param, non-function attributes
+	    } else if ('function' == typeof example[param]) {
+	      if (/^set/.test(param)) {
+		var paramTypeName = param.substring(3);
+		var paramCreate = 'create' + paramTypeName;
+		if (example[param].length == 1 &&
+		    ('function' == typeof window[paramTypeName]) &&
+		    (paramCreate in BaseAudioContext.prototype) &&
+		    ('function' ==
+		       typeof BaseAudioContext.prototype[paramCreate])) {
+		  var numArgs = BaseAudioContext.prototype[paramCreate].length;
+		  var args = new Array(numArgs).fill('?').join(', ');
+		  console.log(typeName + '#' + param + '(' + paramCreate + '(' + args + '))');
+		  nodeTypes[typeName].fields[paramTypeName] = {
+		    type: paramTypeName,
+		    create: paramCreate,
+		    set: param
+		  };
+		} else {
+		  var numArgs = example[param].length;
+		  var args = new Array(numArgs).fill('?').join(', ');
+		  console.log(typeName + '#' + param + '(' + args + ')');
+		  // meh
+		}
+	      } // else ignore non-setter functions
+	    } else {
+	      var paramType = typeof example[param];
+	      if (paramType == 'object') {
+		if (example[param] !== null) {
+		  paramType = example[param].constructor.name;
+		} else if (param == 'buffer') {
+		  paramType = 'AudioBuffer';
+		} else if (param == 'curve') {
+		  paramType = 'Float32Array';
+		}
+	      } else if (paramType == 'string') {
+		paramType = 'enum';
+	      }
+	      // these two are read-only
+	      if ((typeName == 'AnalyserNode' &&
+		   param == 'frequencyBinCount') ||
+		  (typeName == 'DynamicsCompressorNode' &&
+		   param == 'reduction')) {
+		continue;
+	      }
+	      var values;
+	      if (paramType == 'enum') {
+		switch (typeName + '#' + param) {
+		  case 'BiquadFilterNode#type':
+		    values = ["lowpass", "highpass", "bandpass", "lowshelf", "highshelf", "peaking", "notch", "allpass"];
+		    break;
+		  case 'OscillatorNode#type':
+		    values = ["sine", "square", "sawtooth", "triangle", "custom"];
+		    break;
+		  case 'PannerNode#panningModel':
+		    values = ["equalpower", "HRTF"];
+		    break;
+		  case 'PannerNode#distanceModel':
+		    values = ["linear", "inverse", "exponential"];
+		    break;
+		  case 'WaveShaperNode#oversample':
+		    values = ["none", "2x", "4x"];
+		    break;
+		  default:
+		    console.error('unknown enum: ' + typeName + '#' + param);
+		    continue;
+		}
+	      }
+	      console.log(typeName + '#' + param + ' : ' + JSON.stringify(paramType));
+	      nodeTypes[typeName].fields[param] = {
+		type: paramType,
+		defaultValue: example[param]
+	      };
+	      if (paramType == 'enum') {
+		nodeTypes[typeName].fields[param].values = values;
+	      }
+	    }
 	  }
 	}
       }
@@ -209,6 +287,47 @@ function addChild(select) {
       newChild.classList.add('source');
     }
     var grandkids = newChild.getElementsByClassName('children')[0];
+    var fields = nodeTypes[typeName].fields;
+    var fieldNames = Object.keys(fields).sort();
+    fieldNames.forEach(function(name) {
+      var type = fields[name].type;
+      var fieldTemplate = document.getElementById(type + '-field-template');
+      var field = cloneNewID(fieldTemplate);
+      if (type != 'PeriodicWave') {
+	field.querySelector('span.node').innerHTML = type + ' ' + name + ' = ';
+      }
+      switch (type) {
+	case 'boolean':
+	  var input = field.querySelector('input');
+	  input.name = name;
+	  if (fields[name].defaultValue) {
+	    input.setAttribute('checked', 'checked');
+	  }
+	  break;
+	case 'number':
+	  var input = field.querySelector('input');
+	  input.name = name;
+	  input.value = fields[name].defaultValue;
+	  break;
+        case 'enum':
+	  var select = field.querySelector('select.enum');
+	  select.name = name;
+	  fields[name].values.forEach(function(v) {
+	    var option = document.createElement('option');
+	    if (v == fields[name].defaultValue) {
+	      option.setAttribute('selected', 'selected');
+	    }
+	    option.innerHTML = v;
+	    select.appendChild(option);
+	  });
+	  break;
+	case 'PeriodicWave':
+	  field.querySelector('.PeriodicWave-row').remove();
+	  break;
+	// AudioBuffer and Float32Array have no defaults or special handling
+      }
+      grandkids.appendChild(field);
+    });
     var params = nodeTypes[typeName].params;
     var paramTemplate = document.getElementById('audio-param-template');
     // sort parameter names k-rate before a-rate, and then alphabetically
@@ -336,58 +455,67 @@ function moveAutomation(button) {
   }
 }
 
-function changeData(input) {
+function makeValueFn(valueExpr) {
+  // TODO!!! validate input.value before passing to eval
+  return eval(
+    "(function({ f, v, o, r }) {\n" +
+    "  return (" + valueExpr + ");\n" +
+    "})\n"
+  );
+}
+
+function changeLabel(input) {
   var subtree = input.parentNode;
-  if (input.name == 'label') { // we're setting a label field
-    if (subtree.matches('.reference')) { // ... on a reference
-      // ensure that the new label actually refers to an existing node
-      if (!(input.value in tree)) {
-	alert('there is nothing labeled "' + input.value + '" to refer to');
+  if (subtree.matches('.reference')) { // ... on a reference
+    // ensure that the new label actually refers to an existing node
+    if (!(input.value in tree)) {
+      alert('there is nothing labeled "' + input.value + '" to refer to');
+      input.value = oldLabel;
+      return;
+    }
+  } else { // setting a label field on a non-reference
+    // ensure that we can look up the data by its (nonempty) label in tree,
+    // and that any references to this node continue to reference this node
+    var data = tree[subtree.id];
+    var oldLabel = data.label;
+    var references = [];
+    if (oldLabel && oldLabel != '') {
+      for (var id in tree) {
+	if (tree[id].type == 'reference' && tree[id].label == oldLabel) {
+	  references.push(tree[id]);
+	}
+      }
+    }
+    if (input.value == '') {
+      if (references.length > 0) {
+	alert('node is still referenced, cannot remove its label');
 	input.value = oldLabel;
 	return;
       }
-    } else { // setting a label field on a non-reference
-      // ensure that we can look up the data by its (nonempty) label in tree,
-      // and that any references to this node continue to reference this node
-      var data = tree[subtree.id];
-      var oldLabel = data.label;
-      var references = [];
-      if (oldLabel && oldLabel != '') {
-	for (var id in tree) {
-	  if (tree[id].type == 'reference' && tree[id].label == oldLabel) {
-	    references.push(tree[id]);
-	  }
-	}
+    } else {
+      if (input.value in tree) {
+	alert('there is already something labeled "' + input.value + '"');
+	input.value = oldLabel;
+	return;
       }
-      if (input.value == '') {
-	if (references.length > 0) {
-	  alert('node is still referenced, cannot remove its label');
-	  input.value = oldLabel;
-	  return;
-	}
-      } else {
-	if (input.value in tree) {
-	  alert('there is already something labeled "' + input.value + '"');
-	  input.value = oldLabel;
-	  return;
-	}
-	tree[input.value] = data;
-      }
-      if (oldLabel && oldLabel != '') {
-	references.forEach(function(r) { r.label = input.value; });
-	delete tree[oldLabel];
-      }
+      tree[input.value] = data;
+    }
+    if (oldLabel && oldLabel != '') {
+      references.forEach(function(r) { r.label = input.value; });
+      delete tree[oldLabel];
     }
   }
   tree[subtree.id][input.name] = input.value;
-  if (input.name == 'value') {
-    // TODO!!! validate input.value before passing to eval
-    tree[subtree.id].valueFn = eval(
-      "(function({ f, v, o, r }) {\n" +
-      "  return (" + input.value + ");\n" +
-      "})\n"
-    );
-  }
+}
+
+function changeFieldValue(input) {
+  // TODO
+}
+
+function changeParamValue(input) {
+  var subtree = input.parentNode;
+  tree[subtree.id][input.name] = input.value;
+  tree[subtree.id].valueFn = makeValueFn(input.value);
 }
 
 function changeArg(input) {
@@ -400,12 +528,7 @@ function changeArg(input) {
     sib = sib.previousElementSibling;
   }
   tree[input.parentNode.id].args[i] = input.value;
-  // TODO!!! validate input.value before passing to eval
-  tree[input.parentNode.id].argFns[i] = eval(
-    "(function({ f, v, o, r }) {\n" +
-    "  return (" + input.value + ");\n" +
-    "})\n"
-  );
+  tree[input.parentNode.id].argFns[i] = makeValueFn(input.value);
 }
 
 function moveHere(referenceSubtree) {
@@ -431,6 +554,20 @@ function moveHere(referenceSubtree) {
 function copyHere(referenceSubtree) {
   // TODO replace the reference with a copy of the referent, down to any labeled nodes, which become references to the originals instead of copies
   // (do both DOM nodes and data)
+}
+
+function recordBuffer(button) {
+  button.innerHTML = '■';
+  button.className = 'stop';
+  button.setAttribute('onclick', 'stopRecordingBuffer(this)');
+  // TODO
+}
+
+function stopRecordingBuffer(button) {
+  button.innerHTML = '●';
+  button.className = 'record';
+  button.setAttribute('onclick', 'recordBuffer(this)');
+  // TODO
 }
 
 document.getElementById('start').onclick = function(evt) {

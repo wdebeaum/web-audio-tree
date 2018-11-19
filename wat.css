@@ -4,7 +4,7 @@ input.label, input.value {
   border: 1px solid black;
 }
 
-.add-child {
+.add-child, .enum {
   color: yellow;
   background-color: navy;
   height: 2em;
@@ -29,11 +29,29 @@ button.close:active {
   background-color: black;
 }
 
-button.move {
+button.record, button.stop {
+  width: 2em;
+  height: 2em;
+  padding: 3px;
+  border: 1px solid black;
+}
+
+button.record {
+  color: red;
+  background-color: black;
+}
+
+button.stop {
+  /* content: '■'; doesn't work */
+  color: black;
+  background-color: red;
+}
+
+button.narrow {
   width: 2em;
 }
 
-button.move, button.ref {
+button.narrow, button.ref {
   height: 2em;
   padding: 3px;
   border: 1px solid black;
@@ -41,9 +59,14 @@ button.move, button.ref {
   background-color: navy;
 }
 
-button.move:active, button.ref:active {
+button.narrow:active, button.ref:active {
   color: navy;
   background-color: yellow;
+}
+
+canvas.waveform {
+  vertical-align: middle;
+  background-color: black;
 }
 
 #start {
@@ -64,6 +87,10 @@ button.move:active, button.ref:active {
 
 .audio-node.source {
   background-color: #cf7fff;
+}
+
+.field {
+  background-color: #ffcfcf;
 }
 
 .k-rate {

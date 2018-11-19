@@ -21,8 +21,9 @@
 
 <div id="templates">
 <ul>
+ <!-- basic templates -->
  <li id="audio-node-template" class="audio-node subtree expanded"><span class="node"></span>
-  <input class="label" placeholder="label" name="label" onchange="changeData(this)">
+  <input class="label" placeholder="label" name="label" onchange="changeLabel(this)">
   <select class="add-child" onchange="addChild(this)">
    <option selected disabled>add child</option>
    <option>reference</option>
@@ -30,12 +31,12 @@
   <button class="close" onclick="deleteChild(this.parentNode)">×</button>
   <ul class="children"></ul>
  <li id="reference-template" class="audio-node reference subtree leaf"><span class="node">from</span>
-  <input class="label" placeholder="label" name="label" onchange="changeData(this)">
+  <input class="label" placeholder="label" name="label" onchange="changeLabel(this)">
   <button class="ref" onclick="moveHere(this.parentNode)" title="move the referenced node here, and leave a reference in its place">move here</button>
   <button class="ref" onclick="copyHere(this.parentNode)" title="replace this reference with a copy of the referenced node; any labeled descendants become references in the copy">copy here</button>
   <button class="close" onclick="deleteChild(this.parentNode)">×</button>
  <li id="audio-param-template" class="audio-param subtree expanded"><span class="node"></span>
-  <input class="value" placeholder="value" name="value" onchange="changeData(this)">
+  <input class="value" placeholder="value" name="value" onchange="changeParamValue(this)">
   <select class="add-child" onchange="addAutomation(this)">
    <option selected disabled>add automation</option>
    <option>setValueAtTime</option>
@@ -43,27 +44,46 @@
    <option>exponentialRampToValueAtTime</option>
    <option>setTargetAtTime</option>
   </select>
+ <!-- automation templates -->
  <li id="setValueAtTime-template" class="automation subtree leaf"><span class="node">setValueAtTime(</span><input class="value" placeholder="value" onchange="changeArg(this)">,
-  <input class="label" placeholder="start time" onchange="changeArg(this)">)
-  <button class="move" onclick="moveAutomation(this)">↑</button>
-  <button class="move" onclick="moveAutomation(this)">↓</button>
+  <input class="value" placeholder="start time" onchange="changeArg(this)">)
+  <button class="narrow" onclick="moveAutomation(this)">↑</button>
+  <button class="narrow" onclick="moveAutomation(this)">↓</button>
   <button class="close" onclick="deleteChild(this.parentNode)">×</button>
- <li id="linearRampToValueAtTime-template" class="automation subtree leaf"><span class="node">linearRampToValueAtTime(</span><input class="label" placeholder="value" onchange="changeArg(this)">,
-  <input class="label" placeholder="end time" onchange="changeArg(this)">)
-  <button class="move" onclick="moveAutomation(this)">↑</button>
-  <button class="move" onclick="moveAutomation(this)">↓</button>
+ <li id="linearRampToValueAtTime-template" class="automation subtree leaf"><span class="node">linearRampToValueAtTime(</span><input class="value" placeholder="value" onchange="changeArg(this)">,
+  <input class="value" placeholder="end time" onchange="changeArg(this)">)
+  <button class="narrow" onclick="moveAutomation(this)">↑</button>
+  <button class="narrow" onclick="moveAutomation(this)">↓</button>
   <button class="close" onclick="deleteChild(this.parentNode)">×</button>
- <li id="exponentialRampToValueAtTime-template" class="automation subtree leaf"><span class="node">exponentialRampToValueAtTime(</span><input class="label" placeholder="value" onchange="changeArg(this)">,
-  <input class="label" placeholder="end time" onchange="changeArg(this)">)
-  <button class="move" onclick="moveAutomation(this)">↑</button>
-  <button class="move" onclick="moveAutomation(this)">↓</button>
+ <li id="exponentialRampToValueAtTime-template" class="automation subtree leaf"><span class="node">exponentialRampToValueAtTime(</span><input class="value" placeholder="value" onchange="changeArg(this)">,
+  <input class="value" placeholder="end time" onchange="changeArg(this)">)
+  <button class="narrow" onclick="moveAutomation(this)">↑</button>
+  <button class="narrow" onclick="moveAutomation(this)">↓</button>
   <button class="close" onclick="deleteChild(this.parentNode)">×</button>
- <li id="setTargetAtTime-template" class="automation subtree leaf"><span class="node">setTargetAtTime(</span><input class="label" placeholder="target" onchange="changeArg(this)">,
-  <input class="label" placeholder="start time" onchange="changeArg(this)">,
-  <input class="label" placeholder="time constant" onchange="changeArg(this)">)
-  <button class="move" onclick="moveAutomation(this)">↑</button>
-  <button class="move" onclick="moveAutomation(this)">↓</button>
+ <li id="setTargetAtTime-template" class="automation subtree leaf"><span class="node">setTargetAtTime(</span><input class="value" placeholder="target" onchange="changeArg(this)">,
+  <input class="value" placeholder="start time" onchange="changeArg(this)">,
+  <input class="value" placeholder="time constant" onchange="changeArg(this)">)
+  <button class="narrow" onclick="moveAutomation(this)">↑</button>
+  <button class="narrow" onclick="moveAutomation(this)">↓</button>
   <button class="close" onclick="deleteChild(this.parentNode)">×</button>
+ <!-- non-AudioParam field templates -->
+ <li id="boolean-field-template" class="field subtree leaf"><span class="node"></span>
+  <input type="checkbox" onchange="changeFieldValue(this)">
+ <li id="number-field-template" class="field subtree leaf"><span class="node"></span>
+  <input class="value" placeholder="number" onchange="changeFieldValue(this)">
+ <li id="enum-field-template" class="field subtree leaf"><span class="node"></span>
+  <select class="enum" onchange="changeFieldValue(this)"></select>
+ <li id="Float32Array-field-template" class="field subtree leaf"><span class="node"></span>
+  <input class="value" placeholder="numbers" onchange="changeFieldValue(this)">
+ <li id="PeriodicWave-field-template" class="field subtree collapsed"><span class="node">PeriodicWave</span>
+  <table class="children">
+   <tr><th>_ * f</th><th>real</th><th>imaginary</th></tr>
+   <tr id="PeriodicWave-row-template" class="PeriodicWave-row"><td>0</td><td><input value="0"></td><td><input value="0"></td></tr>
+   <tr><td colspan="3"><button class="narrow">+</button> <button class="narrow">-</button></td></tr>
+  </table>
+ <li id="AudioBuffer-field-template" class="field subtree leaf"><span class="node"></span>
+  <button class="record" onclick="recordBuffer(this)">●</button>
+  <canvas class="waveform" width="320" height="32"></canvas>
 </ul>
 </div>
 
