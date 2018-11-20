@@ -84,6 +84,8 @@
  <li id="AudioBuffer-field-template" class="field subtree leaf"><span class="node"></span>
   <button class="record" onclick="recordBuffer(this)">●</button>
   <canvas class="waveform" width="320" height="32"></canvas>
+  <button onclick="saveBuffer(this)">Save...</button>
+  <label>Load: <input type="file" onchange="loadBuffer(this)"></label>
 </ul>
 </div>
 

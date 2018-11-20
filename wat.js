@@ -608,6 +608,126 @@ function stopRecordingBuffer(button) {
   // TODO
 }
 
+// show the first 10 seconds of the buffer as kind of a waveform on the canvas,
+// with each column of pixels forming a histogram of the sample values it
+// represents
+function drawBuffer(canvas, buffer) {
+  var gctx = canvas.getContext('2d');
+  var w = canvas.width;
+  var h = canvas.height;
+  // clear canvas to black
+  gctx.fillStyle = 'black';
+  gctx.fillRect(0, 0, w, h);
+  var numSamplesPerChannelColumn = Math.floor(buffer.sampleRate * 10 / w);
+  var numSamplesPerColumn =
+    buffer.numberOfChannels * numSamplesPerChannelColumn;
+  var columnSamples = new Float32Array(numSamplesPerColumn);
+  var columnHistogram = new Uint32Array(h);
+  var columnImageData = gctx.createImageData(1, h);
+  var columnPixels = columnImageData.data;
+  // set 100% opacity for all pixels
+  for (var y = 0; y < h; y++) { columnPixels[4*y+3] = 255; }
+  var waveformWidth =
+    Math.min(w, Math.floor(buffer.length / numSamplesPerChannelColumn));
+  // find the range of sample values for the whole buffer
+  var minSample = 1;
+  var maxSample = -1;
+  for (var x = 0; x < waveformWidth; x++) {
+    // get all samples from all channels for this column into columnSamples
+    for (var c = 0; c < buffer.numberOfChannels; c++) {
+      var start = numSamplesPerChannelColumn * c;
+      var end = start + numSamplesPerChannelColumn;
+      var channelSamples = columnSamples.subarray(start, end);
+      var startInChannel = numSamplesPerColumn * x;
+      buffer.copyFromChannel(channelSamples, c, startInChannel);
+    }
+    for (var s = 0; s < numSamplesPerColumn; s++) {
+      if (minSample > columnSamples[s]) { minSample = columnSamples[s]; }
+      if (maxSample < columnSamples[s]) { maxSample = columnSamples[s]; }
+    }
+  }
+  var sampleRange = maxSample - minSample;
+  for (var x = 0; x < waveformWidth; x++) {
+    // get all samples from all channels for this column into columnSamples
+    for (var c = 0; c < buffer.numberOfChannels; c++) {
+      var start = numSamplesPerChannelColumn * c;
+      var end = start + numSamplesPerChannelColumn;
+      var channelSamples = columnSamples.subarray(start, end);
+      var startInChannel = numSamplesPerColumn * x;
+      buffer.copyFromChannel(channelSamples, c, startInChannel);
+    }
+    // make a histogram of sample values with one bin per pixel, using the
+    // sample value range we found earlier
+    columnHistogram.fill(0);
+    for (var s = 0; s < numSamplesPerColumn; s++) {
+      var bin =
+	Math.floor((columnSamples[s] - minSample) * h / sampleRange);
+      columnHistogram[bin]++;
+    }
+    // find the maximum count for any histogram bin in this column
+    var maxThisColumn = 0;
+    for (var y = 0; y < h; y++) {
+      if (columnHistogram[y] > maxThisColumn) {
+	maxThisColumn = columnHistogram[y];
+      }
+    }
+    // turn the histogram bins into green pixels of corresponding intensity
+    for (var y = 0; y < h; y++) {
+      columnPixels[4*y+1] = columnHistogram[y] * 255 / maxThisColumn;
+      // mark the full range of the wave in less intense blue
+      columnPixels[4*y+2] = ((columnHistogram[y] > 0) ? 64 : 0);
+    }
+    // put the pixels on the canvas
+    gctx.putImageData(columnImageData, x, 0);
+  }
+}
+
+function loadBuffer(input) {
+		   // input label      li buffer
+  var audioBufferLI = input.parentNode.parentNode;
+  var canvas = audioBufferLI.querySelector('.waveform');
+				// ul.children li ABSN    id
+  var nodeData = tree[audioBufferLI.parentNode.parentNode.id];
+  var file = input.files[0];
+  var reader = new FileReader();
+  reader.onload = function(evt) {
+    var audioData = evt.target.result;
+    ctx.decodeAudioData(audioData).
+    then(function(buffer) {
+      nodeData.fields.buffer.value = buffer;
+      drawBuffer(canvas, buffer);
+    }).
+    catch(function(err) {
+      console.error('failed to decode audio data:');
+      console.error(err);
+    });
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function saveBuffer(button) {
+  // TODO:
+  // - encode buffer as wav (manually?) S16LE:
+  //  > http://www-mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/WAVE.html
+  //  - "RIFF"
+  //  - Uint32LE 36 + 2*numChannels*numSamples [length of rest of file]
+  //  - "WAVE"
+  //  - "fmt "
+  //  - Uint32LE 16 [length of fmt chunk]
+  //  - Uint16LE 1 [PCM]
+  //  - Uint16LE numChannels
+  //  - Uint32LE sampleRate
+  //  - Uint32LE 2*sampleRate*numChannels [bytes/sec]
+  //  - Uint16LE 2*numChannels [bytes/sample (all channels)]
+  //  - Uint16LE 16 [bits/sample (one channel)]
+  //  - "data"
+  //  - Uint32LE 2*numChannels*numSamples [length of data chunk]
+  //  - Uint16LE * numSamples [sample data]
+  // - encode wav in a data URI
+  // - put URI in a hidden download link
+  // - click link
+}
+
 /*
  * Playing note
  */
