@@ -705,27 +705,58 @@ function loadBuffer(input) {
   reader.readAsArrayBuffer(file);
 }
 
+// encode AudioBuffer data as a wav file in a Uint8Array
+// see http://www-mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/WAVE.html
+function encodeWav(audioBuffer) {
+  var numDataBytes = 2 * audioBuffer.numberOfChannels * audioBuffer.length;
+  var wavHeader = "RIFF    WAVEfmt                     data    ";
+  var wavBytes =
+    new Uint8Array(wavHeader.length + numDataBytes);
+  for (var i in wavHeader) { wavBytes[i] = wavHeader.charCodeAt(i); }
+  var wavView = new DataView(wavBytes.buffer);
+  wavView.setUint32(4, 36 + numDataBytes, true); // length of rest of file
+  wavView.setUint32(16, 16, true); // length of rest of "fmt " chunk
+  wavView.setUint16(20, 1, true); // PCM
+  wavView.setUint16(22, audioBuffer.numberOfChannels, true);
+  wavView.setUint32(24, audioBuffer.sampleRate, true);
+  wavView.setUint32(28,
+      2 * audioBuffer.sampleRate * audioBuffer.numberOfChannels, // bytes/sec
+      true);
+  wavView.setUint16(32,
+      2 * audioBuffer.numberOfChannels, // bytes/sample (all channels)
+      true);
+  wavView.setUint16(34, 16, true); // bits/sample (one channel)
+  wavView.setUint32(40, numDataBytes);
+  // copy data a sample at a time
+  // FIXME? it would probably be more efficient to do this in chunks, but
+  // whatever
+  var i = 44;
+  var sample = new Float32Array(1);
+  for (var s = 0; s < audioBuffer.length; s++) {
+    for (var c = 0; c < audioBuffer.numberOfChannels; c++) {
+      audioBuffer.copyFromChannel(sample, c, s);
+      wavView.setInt16(i, Math.round(sample[0] * 32767), true);
+      i += 2;
+    }
+  }
+  return wavBytes;
+}
+
 function saveBuffer(button) {
-  // TODO:
-  // - encode buffer as wav (manually?) S16LE:
-  //  > http://www-mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/WAVE.html
-  //  - "RIFF"
-  //  - Uint32LE 36 + 2*numChannels*numSamples [length of rest of file]
-  //  - "WAVE"
-  //  - "fmt "
-  //  - Uint32LE 16 [length of fmt chunk]
-  //  - Uint16LE 1 [PCM]
-  //  - Uint16LE numChannels
-  //  - Uint32LE sampleRate
-  //  - Uint32LE 2*sampleRate*numChannels [bytes/sec]
-  //  - Uint16LE 2*numChannels [bytes/sample (all channels)]
-  //  - Uint16LE 16 [bits/sample (one channel)]
-  //  - "data"
-  //  - Uint32LE 2*numChannels*numSamples [length of data chunk]
-  //  - Uint16LE * numSamples [sample data]
-  // - encode wav in a data URI
-  // - put URI in a hidden download link
-  // - click link
+  var audioBufferLI = button.parentNode;
+  var bufferSourceLI = audioBufferLI.parentNode.parentNode;
+  var nodeData = tree[bufferSourceLI.id];
+  var filename =
+    ((nodeData.label == '') ? bufferSourceLI.id : nodeData.label) + '.wav';
+  var audioBuffer = nodeData.fields.buffer.value;
+  var wavBytes = encodeWav(audioBuffer);
+  var wavBlob = new Blob([wavBytes], { type: 'audio/wav' });
+  var wavURL = URL.createObjectURL(wavBlob);
+  var link = document.getElementById('file-output');
+  link.href = wavURL;
+  link.download = filename;
+  link.innerHTML = filename;
+  link.click();
 }
 
 /*

@@ -77,7 +77,7 @@ canvas.waveform {
   background-color: lime;
 }
 
-#templates {
+.invisible {
   display: none;
 }
 
