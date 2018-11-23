@@ -294,7 +294,28 @@ function addChild(select) {
       newChild.classList.add('source');
     }
     var grandkids = newChild.getElementsByClassName('children')[0];
+    // non-AudioParam fields
     var fields = nodeTypes[typeName].fields;
+    // start()/end() calls for scheduled nodes (as fake fields)
+    if (nodeTypes[typeName].isScheduled) {
+      data.fields.startWhen = {
+	type: 'number',
+	value: 'o',
+	valueFn: function({ o }) { return o; },
+	set: 'start'
+      };
+      grandkids.appendChild(
+        cloneNoID(document.getElementById('start-template')));
+      // TODO? add offset arg for AudioBufferSourceNode
+      data.fields.stopWhen = {
+	type: 'number',
+	value: 'r',
+	valueFn: function({ r }) { return r; },
+	set: 'stop'
+      };
+      grandkids.appendChild(
+        cloneNoID(document.getElementById('stop-template')));
+    }
     var fieldNames = Object.keys(fields).sort();
     fieldNames.forEach(function(name) {
       var type = fields[name].type;
@@ -349,6 +370,7 @@ function addChild(select) {
       }
       grandkids.appendChild(field);
     });
+    // AudioParams
     var params = nodeTypes[typeName].params;
     var paramTemplate = document.getElementById('audio-param-template');
     // sort parameter names k-rate before a-rate, and then alphabetically
@@ -766,7 +788,7 @@ function saveBuffer(button) {
 function PlayingNote(frequency, velocity, onset) {
   this.vars = { f: frequency, v: velocity, o: onset }; // no release yet
   this.audioNodes = {}; // by label
-  this.scheduledNodes = [];
+  this.scheduledNodes = []; // [audioNode, nodeData] pairs
   this.referenceTasks = []; // functions to be called to connect references
   this.releaseTasks = []; // functions to be called when we know release time
   this.topNodes =
@@ -775,8 +797,7 @@ function PlayingNote(frequency, velocity, onset) {
     n.connect(ctx.destination);
   });
   this.referenceTasks.forEach(function(fn) { fn(); });
-  // TODO make start/end scheduling configurable?
-  this.scheduledNodes.forEach(function(n) { n.start(onset); });
+  this.start();
 }
 
 [ // begin PlayingNote methods
@@ -801,21 +822,15 @@ function PlayingNote(frequency, velocity, onset) {
 	this.audioNodes[nodeData.label] = audioNode;
       }
       if (typeData.isScheduled) {
-	this.scheduledNodes.push(audioNode);
+	this.scheduledNodes.push([audioNode, nodeData]);
       }
       for (var fieldName in nodeData.fields) {
-	var field = nodeData.fields[fieldName];
-	var val = field.valueFn(this.vars);
-	if ('set' in field) {
-	  if (val !== undefined) {
-	    audioNode[field.set](val);
-	  }
-	} else {
-	  audioNode[fieldName] = val;
+	if (!/^st(art|op)When$/.test(fieldName)) {
+	  this.instantiateField(audioNode, fieldName, nodeData);
 	}
       }
       for (var paramName in nodeData.params) {
-	this.instantiateParam(audioNode, paramName, nodeData.params[paramName]);
+	this.instantiateParam(audioNode, paramName, nodeData);
       }
       nodeData.children.forEach(function(c) {
 	this.instantiateNode(c).connect(audioNode);
@@ -824,7 +839,22 @@ function PlayingNote(frequency, velocity, onset) {
     }
   },
 
-  function instantiateParam(audioNode, paramName, paramData) {
+  function instantiateField(audioNode, fieldName, nodeData) {
+    var field = nodeData.fields[fieldName];
+    if (field.value != '') {
+      var val = field.valueFn(this.vars);
+      if ('set' in field) {
+	if (val !== undefined) {
+	  audioNode[field.set](val);
+	}
+      } else {
+	audioNode[fieldName] = val;
+      }
+    }
+  },
+
+  function instantiateParam(audioNode, paramName, nodeData) {
+    var paramData = nodeData.params[paramName];
     var audioParam = audioNode[paramName];
     if (paramData.value != '') {
       audioParam.value = paramData.valueFn(this.vars);
@@ -833,7 +863,7 @@ function PlayingNote(frequency, velocity, onset) {
       // push anything that needs r onto releaseTasks; schedule everything else
       // immediately
       // TODO? only schedule events that happen at onset immediately; do later events in setTimeout(fn,0) to avoid delaying calls to .start() (not sure how much this matters; probably happens internal to these automation methods anyway)
-      if (a.args.some(function(arg) { return /r/.test(arg); })) {
+      if (a.args.some(function(arg) { return /\br\b/.test(arg); })) {
 	var that = this;
 	this.releaseTasks.push(function() {
 	  that.instantiateAutomation(audioParam, a);
@@ -851,16 +881,58 @@ function PlayingNote(frequency, velocity, onset) {
     audioParam[autoData.fn].apply(audioParam, autoData.argFns.map(function(fn) { return fn(this.vars); }, this));
   },
 
+  function start() {
+    var that = this;
+    this.scheduledNodes.forEach(function(pair) {
+      var [audioNode, nodeData] = pair;
+      // remove this pair from the list when the audioNode ends
+      audioNode.onended = function() {
+	var i = that.scheduledNodes.indexOf(pair);
+	if (i >= 0) {
+	  that.scheduledNodes.splice(i, 1);
+	}
+	// if we just removed the last scheduled node, end the whole note
+	if (that.scheduledNodes.length == 0) {
+	  that.end();
+	}
+      };
+      // start the audioNode according to startWhen "field"
+      if (/\br\b/.test(nodeData.fields.startWhen.value)) {
+	that.releaseTasks.push(function() {
+	  that.instantiateField(audioNode, 'startWhen', nodeData);
+	});
+      } else {
+	that.instantiateField(audioNode, 'startWhen', nodeData);
+      }
+      // stop it according to stopWhen
+      if (/\br\b/.test(nodeData.fields.stopWhen.value)) {
+	that.releaseTasks.push(function() {
+	  that.instantiateField(audioNode, 'stopWhen', nodeData);
+	});
+      } else {
+	that.instantiateField(audioNode, 'stopWhen', nodeData);
+      }
+    });
+  },
+
   function release(releaseTime) {
     this.vars.r = releaseTime;
     this.releaseTasks.forEach(function(fn) { fn(); });
-    // FIXME: this isn't quite right; we should only call end after the note has finished sounding, but release does not necessarily immediately stop the note from sounding
-    this.end();
   },
 
   function end() {
-    this.scheduledNodes.forEach(function(n) { n.stop(); });
+    // try to stop any stragglers
+    this.scheduledNodes.forEach(function(n) {
+      try {
+	n.stop();
+      } catch (err) {
+	console.error('failed to stop scheduled node');
+	console.error(err);
+      }
+    });
+    // disconnect everything from the top
     this.topNodes.forEach(function(n) { n.disconnect(); });
+    // call onended() if we have it
     if ('function' == typeof this.onended) {
       this.onended();
     }

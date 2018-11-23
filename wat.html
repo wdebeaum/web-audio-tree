@@ -66,6 +66,9 @@
   <button class="narrow" onclick="moveAutomation(this)">↑</button>
   <button class="narrow" onclick="moveAutomation(this)">↓</button>
   <button class="close" onclick="deleteChild(this.parentNode)">×</button>
+ <!-- scheduling templates -->
+ <li id="start-template" class="field subtree leaf"><span class="node">start(</span><input class="value" placeholder="start time" name="startWhen" value="o" onchange="changeFieldValue(this)">)
+ <li id="stop-template" class="field subtree leaf"><span class="node">stop(</span><input class="value" placeholder="stop time (blank for never)" name="stopWhen" value="r" onchange="changeFieldValue(this)">)
  <!-- non-AudioParam field templates -->
  <li id="boolean-field-template" class="field subtree leaf"><span class="node"></span>
   <input type="checkbox" onchange="changeFieldValue(this)">
