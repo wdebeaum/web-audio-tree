@@ -12,6 +12,11 @@ input.label, input.value {
   box-sizing: content-box;
 }
 
+.enum:disabled {
+  color: #ffff7f;
+  background-color: #7f7fff;
+}
+
 .add-child > option:first-child {
   display: none;
 }
@@ -67,6 +72,15 @@ button.narrow:active, button.ref:active {
 canvas.waveform {
   vertical-align: middle;
   background-color: black;
+}
+
+table.PeriodicWave-table, table.PeriodicWave-table td, table.PeriodicWave-table th {
+  border: 1px solid black;
+  border-collapse: collapse;
+}
+
+table.PeriodicWave-table th, td.PeriodicWave-buttons {
+  text-align: center;
 }
 
 #start {

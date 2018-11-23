@@ -353,6 +353,12 @@ function addChild(select) {
 	    if (v == fields[name].defaultValue) {
 	      option.setAttribute('selected', 'selected');
 	    }
+	    if (typeName == 'OscillatorNode' &&
+	        name == 'type' && v == 'custom') {
+	      // not allowed to directly set OscillatorNode#type='custom'; must
+	      // setPeriodicWave instead
+	      option.setAttribute('disabled', 'disabled');
+	    }
 	    option.innerHTML = v;
 	    select.appendChild(option);
 	  });
@@ -495,6 +501,68 @@ function moveAutomation(button) {
       parentData.automation[i] = parentData.automation[i+1];
       parentData.automation[i+1] = tmp;
     }
+  }
+}
+
+// TODO? allow variables in PeriodicWave values
+function updatePeriodicWave(table) {
+  var subtree = table.parentNode.parentNode.parentNode.parentNode;
+  var data = tree[subtree.id];
+  var real = [];
+  var imag = [];
+  var isImag = false;
+  table.querySelectorAll('input').forEach(function(input) {
+    if (isImag) {
+      imag.push(parseFloat(input.value));
+    } else {
+      real.push(parseFloat(input.value));
+    }
+    isImag = !isImag;
+  });
+  var select = subtree.querySelector("select[name='type']");
+  if (real.length == 0) { // no PeriodicWave
+    // reenable the select and set it to the default value, if we had a
+    // PeriodicWave before
+    if (data.fields.PeriodicWave.value !== undefined) {
+      data.fields.type = nodeTypes.OscillatorNode.fields.type.defaultValue;
+      select.value = data.fields.type;
+      select.disabled = false;
+    }
+    // unset the PeriodicWave
+    data.fields.PeriodicWave.value = undefined;
+  } else { // some PeriodicWave
+    // set type='custom' and disable the select
+    data.fields.type = 'custom';
+    select.value = data.fields.type;
+    select.disabled = true;
+    // make the PeriodicWave
+    data.fields.PeriodicWave.value =
+      ctx.createPeriodicWave(Float32Array.from(real), Float32Array.from(imag));
+  }
+}
+
+function changePeriodicWaveValue(input) {
+  var table = input.parentNode.parentNode.parentNode;
+  updatePeriodicWave(table);
+}
+
+function addPeriodicWaveRow(button) {
+  var buttonRow = button.parentNode.parentNode;
+  var table = buttonRow.parentNode;
+  var rowTemplate = document.getElementById('PeriodicWave-row-template');
+  var newRow = cloneNoID(rowTemplate);
+  newRow.children[0].innerHTML = table.children.length - 2;
+  table.insertBefore(newRow, buttonRow);
+  updatePeriodicWave(table);
+}
+
+function removePeriodicWaveRow(button) {
+  var buttonRow = button.parentNode.parentNode;
+  var table = buttonRow.parentNode;
+  var rowToRemove = buttonRow.previousElementSibling;
+  if (rowToRemove) {
+    rowToRemove.remove();
+    updatePeriodicWave(table);
   }
 }
 
@@ -825,7 +893,11 @@ function PlayingNote(frequency, velocity, onset) {
 	this.scheduledNodes.push([audioNode, nodeData]);
       }
       for (var fieldName in nodeData.fields) {
-	if (!/^st(art|op)When$/.test(fieldName)) {
+	// don't set schedule here, and don't set type when a PeriodicWave has
+	// already been set (spec says that's an error)
+	if (!(/^st(art|op)When$/.test(fieldName) ||
+	      (fieldName == 'type' && ('PeriodicWave' in nodeData.fields) &&
+	       nodeData.fields.PeriodicWave.value))) {
 	  this.instantiateField(audioNode, fieldName, nodeData);
 	}
       }
