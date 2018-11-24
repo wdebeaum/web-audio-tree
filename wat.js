@@ -507,7 +507,9 @@ function deleteChild(childSubtree) {
   }
   if (childSubtree.id && (childSubtree.id in tree)) {
     var childData = tree[childSubtree.id];
-    moveReferencedDescendants(childData);
+    if (removeFromList == 'children') { // automation can't have descendants
+      moveReferencedDescendants(childData);
+    }
     deleteSubtree(childData);
     if (removeFromList) {
       var parentData = tree[childSubtree.parentNode.parentNode.id];
