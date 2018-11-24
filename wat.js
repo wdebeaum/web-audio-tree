@@ -402,7 +402,8 @@ function addChild(select) {
 	value: params[name].defaultValue,
 	valueFn: function() { return this.value; },
 	automation: [],
-	children: []
+	children: [],
+	subtree: param
       };
       tree[param.id] = paramData;
       data.params[name] = paramData;
@@ -423,6 +424,80 @@ function addChild(select) {
   updateSubtree(parentSubtree, true);
 }
 
+function getDescendantLabels(nodeData, labels) {
+  if (!labels) {
+    labels = [];
+  }
+  if (nodeData.type != 'reference' && nodeData.label != '') {
+    labels.push(nodeData.label);
+  }
+  for (var name in nodeData.params) {
+    nodeData.params[name].children.forEach(function(child) {
+      getDescendantLabels(child, labels);
+    });
+  }
+  nodeData.children.forEach(function(child) {
+    getDescendantLabels(child, labels);
+  });
+  return labels;
+}
+
+function isDescendant(ancestorID, descendantID) {
+  if (ancestorID == descendantID) {
+    return true;
+  } else if (descendantID == 'destination') { // root
+    return false;
+  } else {
+    var parentID =
+      document.getElementById(descendantID).parentNode.parentNode.id;
+    return isDescendant(ancestorID, parentID);
+  }
+}
+
+// move descendants of the given node out from under it if they are referenced
+// elsewhere, in preparation for removing the node
+function moveReferencedDescendants(nodeData) {
+  var labels = getDescendantLabels(nodeData);
+  console.log('descendant labels: ' + labels.join(', '));
+  for (var id in tree) {
+    var refNodeData = tree[id];
+    if (refNodeData.type == 'reference') {
+      console.log('reference ' + id + ' has label ' + refNodeData.label);
+      var labelIndex = labels.indexOf(refNodeData.label);
+      console.log('labelIndex = ' + labelIndex);
+      if (labelIndex >= 0 &&
+	  labels.includes(refNodeData.label) &&
+	  !isDescendant(nodeData.subtree.id, id)) {
+	console.log('moving');
+	moveHere(document.getElementById(id)); // swap reference with referent
+	labels.splice(labelIndex, 1); // remove the label from the list
+      }
+    }
+  }
+}
+
+// delete all the nodes in the subtree from tree
+function deleteSubtree(nodeData) {
+  if ('children' in nodeData) {
+    nodeData.children.forEach(deleteSubtree);
+  }
+  if ('params' in nodeData) {
+    for (var name in nodeData.params) {
+      deleteSubtree(nodeData.params[name]);
+    }
+  }
+  if ('automation' in nodeData) {
+    nodeData.automation.forEach(deleteSubtree);
+  }
+  if ('subtree' in nodeData) {
+    delete tree[nodeData.subtree.id];
+  }
+  if (nodeData.type != 'reference' &&
+      nodeData.label != '') {
+    delete tree[nodeData.label];
+  }
+}
+
 function deleteChild(childSubtree) {
   var removeFromList;
   if (childSubtree.matches('.audio-node')) {
@@ -431,29 +506,16 @@ function deleteChild(childSubtree) {
     removeFromList = 'automation';
   }
   if (childSubtree.id && (childSubtree.id in tree)) {
-    if (tree[childSubtree.id].type != 'reference' &&
-        tree[childSubtree.id].label != '') {
-      // this child has a label and isn't itself a reference; check that there
-      // are no references to it, then delete it from its label
-      // FIXME actually, we need to check all the descendants too
-      for (var id in tree) {
-	if (tree[id].label == tree[childSubtree.id].label &&
-	    tree[id].type == 'reference') {
-	  alert('cannot delete node, there are still references to it');
-	  return;
-	}
-      }
-      delete tree[tree[childSubtree.id].label];
-    }
+    var childData = tree[childSubtree.id];
+    moveReferencedDescendants(childData);
+    deleteSubtree(childData);
     if (removeFromList) {
       var parentData = tree[childSubtree.parentNode.parentNode.id];
-      var childData = tree[childSubtree.id];
       var i = parentData[removeFromList].indexOf(childData);
       if (i >= 0) {
 	parentData[removeFromList].splice(i, 1);
       }
     }
-    delete tree[childSubtree.id];
   }
   childSubtree.remove();
 }
@@ -468,7 +530,8 @@ function addAutomation(select) {
   var childData = {
     fn: fnName,
     args: new Array(numArgs),
-    argFns: new Array(numArgs)
+    argFns: new Array(numArgs),
+    subtree: newChild
   };
   tree[newChild.id] = childData;
   tree[select.parentNode.id].automation.push(childData);
