@@ -208,6 +208,14 @@ function initWebAudio() {
   apt.appendChild(ul);
   apt.classList.replace('leaf', 'expanded');
 
+  RecorderNode.addModule(ctx).
+  then(() => { console.log('added RecorderNode to ctx'); }).
+  catch((err) => {
+    console.log(err.message);
+    console.log(err.stack);
+    console.log(JSON.stringify(err));
+  });
+
   document.getElementById('web-audio-status').classList.replace('unknown', 'supported');
 }
 
@@ -749,18 +757,43 @@ function copyHere(referenceSubtree) {
   // (do both DOM nodes and data)
 }
 
+var inputStream;
+var inputSource;
+var recorderNode;
+
 function recordBuffer(button) {
   button.innerHTML = '■';
   button.className = 'stop';
   button.setAttribute('onclick', 'stopRecordingBuffer(this)');
-  // TODO
+  // TODO? push some of this into RecorderNode
+  navigator.mediaDevices.getUserMedia({ audio: { channelCount: { exact: 2 } } }).
+  then((stream) => {
+    inputStream = stream;
+    var sampleRate = inputStream.getTracks()[0].getSettings().sampleRate;
+    inputSource = ctx.createMediaStreamSource(stream);
+    recorderNode = new RecorderNode(ctx, sampleRate);
+    inputSource.connect(recorderNode);
+    recorderNode.connect(ctx.destination);
+  });
 }
 
 function stopRecordingBuffer(button) {
+  var audioBufferLI = button.parentNode;
+  var canvas = audioBufferLI.querySelector('.waveform');
+  var nodeData = tree[audioBufferLI.parentNode.parentNode.id];
   button.innerHTML = '●';
   button.className = 'record';
   button.setAttribute('onclick', 'recordBuffer(this)');
-  // TODO
+  inputStream.getTracks()[0].stop(); // stop recording audio
+  inputStream = null;
+  inputSource.disconnect();
+  inputSource = null;
+  recorderNode.disconnect();
+  recorderNode.getBuffer().then((buffer) => {
+    nodeData.fields.buffer.value = buffer;
+    drawBuffer(canvas, buffer);
+    recorderNode = null;
+  });
 }
 
 // show the first 10 seconds of the buffer as kind of a waveform on the canvas,
