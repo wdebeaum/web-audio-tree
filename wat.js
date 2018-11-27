@@ -208,13 +208,17 @@ function initWebAudio() {
   apt.appendChild(ul);
   apt.classList.replace('leaf', 'expanded');
 
-  RecorderNode.addModule(ctx).
-  then(() => { console.log('added RecorderNode to ctx'); }).
-  catch((err) => {
-    console.log(err.message);
-    console.log(err.stack);
-    console.log(JSON.stringify(err));
-  });
+  if (!AudioWorkletNode.isBogus) {
+    RecorderNode.addModule(ctx).
+    then(() => { console.log('added RecorderNode to ctx'); }).
+    catch((err) => {
+      console.log(err.message);
+      console.log(err.stack);
+      console.log(JSON.stringify(err));
+    });
+  } else {
+    console.log('RecorderNode is not a function');
+  }
 
   document.getElementById('web-audio-status').classList.replace('unknown', 'supported');
 }
@@ -914,7 +918,7 @@ function encodeWav(audioBuffer) {
       2 * audioBuffer.numberOfChannels, // bytes/sample (all channels)
       true);
   wavView.setUint16(34, 16, true); // bits/sample (one channel)
-  wavView.setUint32(40, numDataBytes);
+  wavView.setUint32(40, numDataBytes, true);
   // copy data a sample at a time
   // FIXME? it would probably be more efficient to do this in chunks, but
   // whatever

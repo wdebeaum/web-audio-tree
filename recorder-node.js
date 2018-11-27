@@ -1,3 +1,8 @@
+if (!('AudioWorkletNode' in window)) {
+  console.log('no AudioWorkletNode');
+  window.AudioWorkletNode = { isBogus: true }; // for now
+}
+
 class RecorderNode extends AudioWorkletNode {
   constructor(context, sampleRate) {
     super(context, 'recorder-processor' /*, { numberOfOutputs: 0 }*/);

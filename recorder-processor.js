@@ -6,7 +6,7 @@ class RecorderProcessor extends AudioWorkletProcessor {
     this.samples = new Float32Array(1024); // one 4k page
     this.numSamples = 0;
     this.port.onmessage = (evt) => {
-      this.port.postMessage(this.samples);
+      this.port.postMessage(this.samples.subarray(0, this.numSamples));
     };
   }
 
