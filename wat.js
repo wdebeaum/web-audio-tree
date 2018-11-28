@@ -1096,11 +1096,12 @@ function PlayingNote(frequency, velocity, onset) {
 
   function end() {
     // try to stop any stragglers
-    this.scheduledNodes.forEach(function(n) {
+    this.scheduledNodes.forEach(function([n, d]) {
       try {
 	n.stop();
       } catch (err) {
-	console.error('failed to stop scheduled node');
+	console.error('failed to stop scheduled node:');
+	console.error(n);
 	console.error(err);
       }
     });
