@@ -208,7 +208,7 @@ function initWebAudio() {
   apt.appendChild(ul);
   apt.classList.replace('leaf', 'expanded');
 
-  if (!AudioWorkletNode.isBogus) {
+  if ('RecorderNode' in window) {
     RecorderNode.addModule(ctx).
     then(() => { console.log('added RecorderNode to ctx'); }).
     catch((err) => {
@@ -217,7 +217,7 @@ function initWebAudio() {
       console.log(JSON.stringify(err));
     });
   } else {
-    console.log('RecorderNode is not a function');
+    console.log('no RecorderNode');
   }
 
   document.getElementById('web-audio-status').classList.replace('unknown', 'supported');
@@ -774,9 +774,12 @@ function recordBuffer(button) {
   then((stream) => {
     inputStream = stream;
     var sampleRate = inputStream.getTracks()[0].getSettings().sampleRate;
+    if (!('number' == typeof sampleRate)) {
+      sampleRate = ctx.sampleRate;
+    }
     inputSource = ctx.createMediaStreamSource(stream);
     recorderNode = new RecorderNode(ctx, sampleRate);
-    inputSource.connect(recorderNode);
+    recorderNode.connectFrom(inputSource);
     recorderNode.connect(ctx.destination);
   });
 }
@@ -797,6 +800,9 @@ function stopRecordingBuffer(button) {
     nodeData.fields.buffer.value = buffer;
     drawBuffer(canvas, buffer);
     recorderNode = null;
+  }).catch((err) => {
+    console.log('error getting recording buffer:');
+    console.error(err);
   });
 }
 
