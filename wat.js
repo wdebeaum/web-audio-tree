@@ -2,6 +2,18 @@
  * Initialization
  */
 
+// no webkit prefix plz
+Object.getOwnPropertyNames(window).forEach((k) => {
+  if (/^webkit/.test(k)) {
+    var noPrefix = k.substring(6);
+    var noPrefixLower = noPrefix.substring(0,1).toLowerCase() + noPrefix.substring(1);
+    if (!(noPrefix in window) && !(noPrefixLower in window)) {
+      window[noPrefix] = window[k];
+      window[noPrefixLower] = window[k];
+    }
+  }
+});
+
 initTrees();
 
 const nodeTypes = {
@@ -46,6 +58,19 @@ function initWebAudio() {
     document.getElementById('web-audio-status').classList.replace('unknown', 'unsupported');
     return;
   }
+  // fake BaseAudioContext if it's missing
+  if (!('BaseAudioContext' in window)) {
+    window.BaseAudioContext = window.AudioContext;
+  }
+  // fake AudioScheduledSourceNode if it's missing
+  if (!('AudioScheduledSourceNode' in window)) {
+    window.AudioScheduledSourceNode = function() {};
+    window.AudioScheduledSourceNode.prototype = {};
+    'onended start stop connect disconnect context numberOfInputs numberOfOutputs channelCount channelCountMode channelInterpretation playbackState UNSCHEDULED_STATE SCHEDULED_STATE PLAYING_STATE FINISHED_STATE'.split(/ /).forEach((k) => {
+      window.AudioScheduledSourceNode.prototype[k] = null;
+    });
+  }
+
   ctx = new AudioContext({ latencyHint: 'interactive' });
 
   // fill nodeTypes by inspecting BaseAudioContext and example nodes created
@@ -148,9 +173,11 @@ function initWebAudio() {
 		  case 'OscillatorNode#type':
 		    values = ["sine", "square", "sawtooth", "triangle", "custom"];
 		    break;
+		  case 'AudioPannerNode#panningModel':
 		  case 'PannerNode#panningModel':
 		    values = ["equalpower", "HRTF"];
 		    break;
+		  case 'AudioPannerNode#distanceModel':
 		  case 'PannerNode#distanceModel':
 		    values = ["linear", "inverse", "exponential"];
 		    break;
