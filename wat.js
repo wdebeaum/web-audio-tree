@@ -65,7 +65,7 @@ function initWebAudio() {
   // fake AudioScheduledSourceNode if it's missing
   if (!('AudioScheduledSourceNode' in window)) {
     window.AudioScheduledSourceNode = function() {};
-    window.AudioScheduledSourceNode.prototype = {};
+    window.AudioScheduledSourceNode.prototype = { isFake: true };
     'onended start stop connect disconnect context numberOfInputs numberOfOutputs channelCount channelCountMode channelInterpretation playbackState UNSCHEDULED_STATE SCHEDULED_STATE PLAYING_STATE FINISHED_STATE'.split(/ /).forEach((k) => {
       window.AudioScheduledSourceNode.prototype[k] = null;
     });
@@ -96,7 +96,10 @@ function initWebAudio() {
 	  // if it is, make an entry in nodeTypes
 	  nodeTypes[typeName] = {
 	    create: k,
-	    isScheduled: (example instanceof AudioScheduledSourceNode),
+	    isScheduled:
+	      (AudioScheduledSourceNode.prototype.isFake ?
+	        ('start' in example) :
+	        (example instanceof AudioScheduledSourceNode)),
 	    numberOfInputs: example.numberOfInputs,
 	    numberOfOutputs: example.numberOfOutputs,
 	    params: {},
