@@ -1,0 +1,28 @@
+body {
+  background-color: white;
+}
+code {
+  background-color: lightgray;
+}
+code > pre {
+  margin-top: 1ex;
+  margin-bottom: 1ex;
+  margin-left: 1em;
+  margin-right: 1ex;
+  padding: 1ex;
+  background-color: lightgray;
+  overflow: auto;
+}
+var {
+  background-color: skyblue;
+}
+dt {
+  margin-top: 1em;
+}
+.TODO {
+  background-color: yellow;
+}
+.TODO:before {
+  content: "TODO: ";
+}
+

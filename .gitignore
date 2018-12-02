@@ -1,4 +1,5 @@
 .*.swp
+README.html
 package-lock.json
 node_modules/
 old/
