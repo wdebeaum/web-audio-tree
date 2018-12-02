@@ -280,7 +280,7 @@ function initWebMIDI() {
 	if (evt.data.length == 3) {
 	  var cmd = evt.data[0] >> 4;
 	  var noteNum = evt.data[1];
-	  var velocity = evt.data[2];
+	  var velocity = evt.data[2] / 127; // divide so velocity is in [0,1]
 	  if (cmd == 8 || // note off
 	      (cmd == 9 && velocity == 0)) { // note on with vel 0 (i.e. off)
 	    //console.log({ note: 'off', num: noteNum });
@@ -292,7 +292,7 @@ function initWebMIDI() {
 	    if (note2osc[noteNum]) {
 	      note2osc[noteNum].end();
 	    }
-	    note2osc[noteNum] = noteNumToStartedOscillator(noteNum, velocity);
+	    note2osc[noteNum] = new PlayingNote(noteNum, velocity);
 	  }
 	}
       } catch (e) {
@@ -676,7 +676,7 @@ function removePeriodicWaveRow(button) {
 function makeValueFn(valueExpr) {
   // TODO!!! validate input.value before passing to eval
   return eval(
-    "(function({ f, v, o, r }) {\n" +
+    "(function({ n, f, v, o, r }) {\n" +
     "  return (" + valueExpr + ");\n" +
     "})\n"
   );
@@ -991,8 +991,18 @@ function saveBuffer(button) {
  * Playing note
  */
 
-function PlayingNote(frequency, velocity, onset) {
-  this.vars = { f: frequency, v: velocity, o: onset }; // no release yet
+function PlayingNote(noteNum, velocity, onset) {
+  if (velocity === undefined) {
+    velocity = 1;
+  }
+  if (onset === undefined) {
+    onset = ctx.currentTime;
+  }
+  // TODO make octave changeable
+  var fractionOfA440 = Math.pow(2.0, (noteNum - 69) / 12) * 2;
+  var frequency = fractionOfA440 * 440;
+  // NOTE: no release (r) var yet
+  this.vars = { n: noteNum, f: frequency, v: velocity, o: onset };
   this.audioNodes = {}; // by label
   this.scheduledNodes = []; // [audioNode, nodeData] pairs
   this.referenceTasks = []; // functions to be called to connect references
@@ -1151,17 +1161,6 @@ function PlayingNote(frequency, velocity, onset) {
 
 ].forEach(function(fn) { PlayingNote.prototype[fn.name] = fn; });
 
-function noteNumToStartedOscillator(noteNum, velocity) {
-  if (velocity === undefined) {
-    velocity = 1;
-  }
-  // TODO make octave changeable
-  var fractionOfMiddleC = Math.pow(2.0, (0 + noteNum - 72) / 12) * 2;
-  var frequency = fractionOfMiddleC * 440;
-  //console.log('start oscillator at ' + frequency + ' Hz');
-  return new PlayingNote(frequency, velocity, ctx.currentTime);
-}
-
 /*
  * Keyboard
  * (largely borrowed from music-cad)
@@ -1209,7 +1208,7 @@ document.body.onkeydown = function(evt) {
       if (!kc2osc[code]) {
 	var noteNum = td.className.slice(0,2);
 	if (/\d\d/.test(noteNum)) {
-	  kc2osc[code] = noteNumToStartedOscillator(noteNum);
+	  kc2osc[code] = new PlayingNote(noteNum);
 	}
 	setTimeout(function() { td.classList.add("keydown"); }, 0);
       }
@@ -1242,7 +1241,7 @@ document.getElementById('keyboard').onmousedown = function(evt) {
   var td = evt.target;
   if (td.matches('.b, .w')) {
     var noteNum = evt.target.className.slice(0,2);
-    mouseOscillator = noteNumToStartedOscillator(noteNum);
+    mouseOscillator = new PlayingNote(noteNum);
     mouseOscillator.onended =
       function () {
 	td.classList.remove('keydown');
@@ -1265,7 +1264,7 @@ forEach(function(td) {
     if (mouseButtonIsDown) {
       if (td.matches('.b, .w')) {
 	var noteNum = td.className.slice(0,2);
-	mouseOscillator = noteNumToStartedOscillator(noteNum);
+	mouseOscillator = new PlayingNote(noteNum);
 	//console.log("enter " + mouseOscillator.vars.f);
 	mouseOscillator.onended =
 	  function () {
