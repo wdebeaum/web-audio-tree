@@ -684,6 +684,8 @@ function makeValueFn(valueExpr) {
 
 function changeLabel(input) {
   var subtree = input.parentNode;
+  var data = tree[subtree.id];
+  var oldLabel = data.label;
   if (subtree.matches('.reference')) { // ... on a reference
     // ensure that the new label actually refers to an existing node
     if (!(input.value in tree)) {
@@ -694,8 +696,6 @@ function changeLabel(input) {
   } else { // setting a label field on a non-reference
     // ensure that we can look up the data by its (nonempty) label in tree,
     // and that any references to this node continue to reference this node
-    var data = tree[subtree.id];
-    var oldLabel = data.label;
     var references = [];
     if (oldLabel && oldLabel != '') {
       for (var id in tree) {
@@ -723,7 +723,7 @@ function changeLabel(input) {
       delete tree[oldLabel];
     }
   }
-  tree[subtree.id][input.name] = input.value;
+  data[input.name] = input.value;
 }
 
 function changeFieldValue(input) {
