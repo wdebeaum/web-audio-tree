@@ -16,6 +16,24 @@ And Web Audio Tree can make use of the [Media Capture and Streams API](https://w
 
 ## Usage ##
 
+### Web Audio API basics ###
+
+The Web Audio API lets you process and play audio from JavaScript running in a web browser. You do this by setting up a graph that describes the processing to be done, scheduling when certain nodes in the graph start and stop playing, and optionally automating changes to parameters. The edges of the graph are connections along which audio data flows. When more than one connection is made to the same place, the audio is mixed.
+
+Audio data is represented as floating point numbers, called samples, usually between -1 and 1, representing sound levels at specific moments in time, called sample frames. Since audio data may have more than one channel (e.g. left and right for stereo), each sample frame has a sample for each channel. Most of the time you can ignore the existence of channels and just think of audio data as a single stream of samples.
+
+The nodes of the graph are either `AudioNode`s or `AudioParam`s. `AudioNode`s are created using an `AudioContext`, which also includes a special `destination` node representing the speakers. Each type of `AudioNode` has a number of outputs (usually 1), and a number of inputs (usually 0 or 1), which can be connected to or from other graph nodes, respectively. It may also have some named `AudioParam`s and other fields that affect its behavior.
+
+An `AudioParam` has a single numeric value at any given time, which you can think of as its output, passed into the `AudioNode` it is part of, but separate from the `AudioNode`'s other inputs (not mixed). You can simply set the value of an `AudioParam`, or you can automate changes to its value over time. `AudioParam`s also act as inputs; you can connect the output of another `AudioNode` to them (this is useful for various kinds of modulation). The audio data from these incoming connections is mixed (added) with the `AudioParam`'s set or automated value. An `AudioParam` may be a-rate (audio-rate) or k-rate (kontrol-rate?); an a-rate parameter can have a different value for each audio sample frame (e.g. 44100 times per second), while a k-rate parameter samples at a lower rate, once every render quantum (defined to be 128 sample frames).
+
+Fields of `AudioNodes` that are not `AudioParams` cannot be automated or connected to, they can only be set. But fields are not restricted to numeric values. In fact, most numbers associated with `AudioNodes` are realized as `AudioParam`s; the exceptions are numbers that are not meant to vary over time, such as the `fftSize` of an `AnalyserNode`.
+
+One important detail of the API is that any `AudioNode`s that can be scheduled to start can only be started once. To play the same sound again you must create and connect a new copy of any such node before starting it again. Web Audio Tree conveniently hides this detail from you, making a new instance of the whole tree for each note you play (this also enables polyphony).
+
+For more information on the API, including a complete list of the different types of `AudioNode`s and their parameters and other fields, see the [Web Audio API spec](https://webaudio.github.io/web-audio-api/).
+
+### Web Audio Tree ###
+
 To start using Web Audio Tree, click the green "start" button. This will attempt to create an `AudioContext`, and then attempt to connect to your computer's first MIDI input port. The results of these attempts are visible in the API status area in the top right; a green checkmark means success, a red X means your browser doesn't support the relevant API, and a yellow question mark means either the attempt wasn't made for some reason, or you do have the API but it didn't work (this can happen if you don't have a MIDI input port). Only the green checkmark next to "Web Audio API" is required.
 
 To start with, you are given the root of the tree, the `AudioDestinationNode` labeled "destination". This corresponds to the `destination` field of the `AudioContext`, and it is where audio data flows to in order to play it out of the speakers. When you click the "start" button, the button is replaced with an "add child" menu. All `AudioNode`s with an input have this menu. Selecting an `AudioNode` type from this menu will add an instance of that type as a child, which is to say the child's output will be connected to the parent's input. You can remove a child by clicking on the red X button to its right.
@@ -30,11 +48,11 @@ You can also add automation calls to `AudioParam`s, which lets you schedule smoo
 
 When setting values for `AudioParam`s, number fields, or automation or scheduling calls, you can use simple arithmetic expressions with these variables:
 
- - `n` = The MIDI note number of the key that was pressed.
- - `f` = The corresponding frequency in Hz.
- - `v` = The velocity of the key press, as a number between 0 and 1.
- - `o` = The onset time in seconds since the `AudioContext` was created.
- - `r` = The release time in seconds since the `AudioContext` was created.
+ - `n` = The MIDI **n**ote number of the key that was pressed.
+ - `f` = The corresponding **f**requency in Hz.
+ - `v` = The **v**elocity of the key press, as a number between 0 and 1.
+ - `o` = The **o**nset time in seconds since the `AudioContext` was created.
+ - `r` = The **r**elease time in seconds since the `AudioContext` was created.
 
 Note that since we only know `r` after the key was released, it can only be used in scheduling and automation calls, and using it has the side effect that the calls it is used in will be deferred until the key has been released. So you can't, for example, schedule an `OscillatorNode` to stop playing 1 second before the key is released by putting `r-1` in its `stop()` call. This software cannot see the future.
 
@@ -42,7 +60,7 @@ Note that since we only know `r` after the key was released, it can only be used
 
 To actually play the instrument you have created by building the tree, you can press, hold, and release keys using one of three methods:
 
- - Press the corresponding keys on your computer's keyboard. Use the diagram below the tree to show you which keys to press. This gives you a little over two octaves, with the q key being middle C. Note that the two rows overlap: ,-/ and q-e are the same notes. Also note that, while you can get polyphony by holding multiple keys, many computer keyboards are unable to detect certain combinations of keypresses, so one or more of the notes may not sound.
+ - Press the corresponding keys on your computer's keyboard. Use the diagram below the tree to show you which keys to press. This gives you a little over two octaves, with the q key being middle C. Note that the two rows overlap: ,-/ and q-e are the same notes. Also note that, while you can get polyphony by holding multiple keys, many computer keyboards are unable to detect certain combinations of keypresses, so one or more of the notes in a given chord may not sound.
  - Click on the key diagram with your mouse or other pointing device. You can't get polyphony this way, but you can drag the mouse across the keys to change which note is being played.
  - Connect a MIDI keyboard (or other MIDI controller) to your computer and press its keys. This will only work if there is a green checkmark next to "Web MIDI API" in the top right corner, and your device is connected to the first MIDI input port your computer has (however it defines "first"). Only note on/off messages are supported, so e.g. a sustain pedal isn't going to work. <span class="TODO">make sustain pedals work.</span>
 
@@ -52,7 +70,7 @@ You can also use references to move nodes. Just make a reference as above, and t
 
 <span class="TODO">make the "copy here" button work too.</span>
 
-Note that while you can make cycles in the graph using references, the Web Audio API specification says that you must insert a non-zero `DelayNode` in any such cycle. Web Audio Tree does not check for this, but if you break this rule, you might break it.
+Note that while you can make cycles in the graph using references, the Web Audio API specification says that you must insert a non-zero `DelayNode` in any such cycle. Web Audio Tree does not check for this, but if you break this rule, you might break the program.
 
 ### Examples ###
 
