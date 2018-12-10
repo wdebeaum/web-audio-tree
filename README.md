@@ -62,13 +62,13 @@ To actually play the instrument you have created by building the tree, you can p
 
  - Press the corresponding keys on your computer's keyboard. Use the diagram below the tree to show you which keys to press. This gives you a little over two octaves, with the q key being middle C. Note that the two rows overlap: ,-/ and q-e are the same notes. Also note that, while you can get polyphony by holding multiple keys, many computer keyboards are unable to detect certain combinations of keypresses, so one or more of the notes in a given chord may not sound.
  - Click on the key diagram with your mouse or other pointing device. You can't get polyphony this way, but you can drag the mouse across the keys to change which note is being played.
- - Connect a MIDI keyboard (or other MIDI controller) to your computer and press its keys. This will only work if there is a green checkmark next to "Web MIDI API" in the top right corner, and your device is connected to the first MIDI input port your computer has (however it defines "first"). Only note on/off messages are supported, so e.g. a sustain pedal isn't going to work. <span class="TODO">make sustain pedals work.</span>
+ - Connect a MIDI keyboard (or other MIDI controller) to your computer and press its keys. This will only work if there is a green checkmark next to "Web MIDI API" in the top right corner, and your device is connected to the first MIDI input port your computer has (however it defines "first"). Only note on/off messages are supported, so e.g. a sustain pedal isn't going to work. <span class="TODO">Making sustain pedals work is a planned feature.</span>
 
 Anywhere you can add an `AudioNode` child, you can also add a reference to another `AudioNode` already in the tree. Make sure the node you plan to refer to (the "referent") has a label by entering one in the text box to the right of the node type. Then add a "reference" child somewhere else, and enter the same label in its text box. The referent's output will be connected to both parents' inputs.
 
 You can also use references to move nodes. Just make a reference as above, and then click on its "move here" button. The reference and its referent will switch places. Then you can remove the reference, leaving the referent in its new location in the tree.
 
-<span class="TODO">make the "copy here" button work too.</span>
+<span class="TODO">The "copy here" button is a planned feature that doesn't currently work.</span>
 
 Note that while you can make cycles in the graph using references, the Web Audio API specification says that you must insert a non-zero `DelayNode` in any such cycle. Web Audio Tree does not check for this, but if you break this rule, you might break the program.
 
@@ -158,15 +158,15 @@ Phase Modulation:
  - AudioDestinationNode destination
    - GainNode carrierGain
      - **DelayNode** phaseDelay
-       - AudioParam delayTime = 0
+       - AudioParam delayTime = **1 / (4 * f)** _[delayTime musn't go negative]_
          - **GainNode** modulatorGain
-           - AudioParam gain = **f / 2**
+           - AudioParam gain = **1 / (4 * f)**
            - **OscillatorNode** modulator
              - AudioParam frequency = **f / 2**
        - Oscillator carrier
          - AudioParam frequency = f
 
-Technically, phase modulation is equivalent to frequency modulation for sine waves, except for a phase shift. And for that reason it was often used to implement "frequency" modulation in synthesizers and sound cards like the Adlib. But those devices don't just use sine waves, so it's not actually equivalent. And phase modulation seems to be less reliable than actual frequency modulation in current implementations of the Web Audio API. So if you want to do "FM synthesis" with Web Audio Tree, it's better to use actual FM.
+Technically, phase modulation is equivalent to frequency modulation for sine waves, except for a phase shift. And for that reason it was often used to implement "frequency" modulation in synthesizers and sound cards like the Adlib. But those devices don't just use sine waves, so it's not actually equivalent.
 
 You can use a `WaveShaperNode` to give an `OscillatorNode` an arbitrary waveform:
 
