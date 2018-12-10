@@ -74,7 +74,129 @@ Note that while you can make cycles in the graph using references, the Web Audio
 
 ### Examples ###
 
-<span class="TODO">specific examples (simple sine, FM, buffer loop, filters, etc. In particular, explain special field types: PeriodicWave, curve, buffer)</span>
+The following are some examples of common patterns you might want to build in Web Audio Tree. Parameters and fields that aren't relevant for the specific example are omitted, and parts you must add or enter are in **bold**. Explanatory comments are added in _[bracketed italics]_.
+
+First, probably the simplest possible thing that's actually playable as an instrument: a sine-wave organ.
+
+ - AudioDestinationNode destination
+   - **GainNode** _[add child... GainNode]_
+     - AudioParam gain = **0.1** _[change this from 1]_
+     - **OscillatorNode** _[add this as a child of the GainNode]_
+       - AudioParam frequency = **f** _[set the frequency or everything will be A440]_
+
+You can automate the `GainNode`, adding a simple envelope to make the instrument more "piano"-like:
+
+ - AudioDestinationNode destination
+   - GainNode
+     - AudioParam gain = 0.1
+       - **setTargetAtTime(0, o, 0.5)** _[start moving the gain towards 0 at time o, with time constant 0.5 (lower is faster)]_
+     - OscillatorNode
+
+Or you can make the envelope more complex:
+
+ - AudioDestinationNode destination
+   - GainNode
+     - AudioParam gain = **0** _[start at 0]_
+       - **linearRampToValueAtTime(0.2, o + 0.01)** _[attack, reaching 0.2 at time o + 0.01]_
+       - **setTargetAtTime(0.1, o, 0.3)** _[decay and sustain at 0.1]_
+       - **setTargetAtTime(0, r, 0.3)** _[release to 0]_
+     - OscillatorNode
+       - stop(r **+ 5**) _[stop playing 5 seconds after key is released]_
+
+Note that if you want to have the note continue playing after releasing the key that you used to play it, you must add to the stop time (in this case we added 5 seconds, which should be plenty).
+
+Sine waves can be a bit boring, but we have other options, for example sawtooth:
+
+ - AudioDestinationNode destination
+   - GainNode
+     - OscillatorNode
+       - enum type = **sawtooth**
+
+You can also construct an arbitrary periodic wave by specifying complex amplitudes (representing loudness and phase) for multiples of the specified frequency of the `OscillatorNode`. In most cases you don't really need to worry about the complex numbers; just set the real components.
+
+ - AudioDestinationNode destination
+   - GainNode
+     - OscillatorNode
+       - PeriodicWave
+         - _ * f | real    | imaginary
+         - 0     | 0       | 0 _[no DC offset]_
+         - 1     | **1**   | 0 _[the main frequency]_
+         - 2     | **0.2** | 0 _[lower amplitude for 2 * f]_
+         - 3     | **0.4** | 0 _[middle amplitude for 3 * f]_
+       - enum type = custom
+
+Note that when you add rows to the `PeriodicWave` table, the `type` automatically switches to `custom`. If you delete all the rows, it switches back to `sine`.
+
+You can make interesting sounds using various kinds of modulation, connecting additional oscillators to parameters.
+
+Amplitude Modulation (AM):
+
+ - AudioDestinationNode destination
+   - GainNode carrierGain
+     - AudioParam gain = 0.1 _[center amplitude on 0.1]_
+       - **GainNode** modulatorGain
+         - AudioParam gain = **0.05** _[vary the amplitude by ±0.05, i.e. between 0.05 and 0.15]_
+         - **Oscillator** modulator
+           - AudioParam frequency = **f / 2**
+     - OscillatorNode carrier
+       - AudioParam frequency = f
+
+Frequency Modulation (FM):
+
+ - AudioDestinationNode destination
+   - GainNode carrierGain
+     - AudioParam gain = 0.1
+     - OscillatorNode carrier
+       - AudioParam frequency = f
+         - **GainNode** modulatorGain
+           - AudioParam gain = **f**
+           - **Oscillator** modulator
+             - AudioParam frequency = **f / 2**
+
+Phase Modulation:
+
+ - AudioDestinationNode destination
+   - GainNode carrierGain
+     - **DelayNode** phaseDelay
+       - AudioParam delayTime = 0
+         - **GainNode** modulatorGain
+           - AudioParam gain = **f / 2**
+           - **OscillatorNode** modulator
+             - AudioParam frequency = **f / 2**
+       - Oscillator carrier
+         - AudioParam frequency = f
+
+Technically, phase modulation is equivalent to frequency modulation for sine waves, except for a phase shift. And for that reason it was often used to implement "frequency" modulation in synthesizers and sound cards like the Adlib. But those devices don't just use sine waves, so it's not actually equivalent. And phase modulation seems to be less reliable than actual frequency modulation in current implementations of the Web Audio API. So if you want to do "FM synthesis" with Web Audio Tree, it's better to use actual FM.
+
+You can use a `WaveShaperNode` to give an `OscillatorNode` an arbitrary waveform:
+
+ - AudioDestinationNode destination
+   - GainNode
+     - **WaveShaperNode**
+       - Float32Array curve = **-1, -0.2, 0, 0.8, 1**
+       - OscillatorNode
+         - enum type = **triangle**
+
+In this example, the `WaveShaperNode`'s `curve` effectively moves the points on the `triangle` wave where it crosses -0.5 and 0.5, up to -0.2 and 0.8, respectively, while leaving the points where it touches -1, 0, and 1 alone.
+
+You can use an `AudioBufferSourceNode` instead of an `OscillatorNode`, to play a sound loaded from a file (by clicking the file input button labeled "Load"), or a sound you record from your microphone (by clicking the record button to start recording, and then clicking it again to stop).
+
+ - AudioDestinationNode destination
+   - **AudioBufferSourceNode**
+     - AudioBuffer buffer = **[●]** `[-|/\/\/\----]` [Save] Load: **[Browse...]**
+     - AudioParam playbackRate = **f / 440**
+
+To use such a recording as an instrument, you should put the note frequency variable `f` into the `playbackRate` parameter, divided by the actual frequency of the original sound (A440 in this case). Note that unlike the `OscillatorNode`, the `AudioBufferSourceNode` doesn't automatically play the sound as loudly as it can, just at its original volume. So a `GainNode` might not be necessary here.
+
+A similar `AudioBuffer` field exists in the `ConvolverNode`, which can be useful for applying environmental effects to other sounds.
+
+ - AudioDestinationNode destination
+   - GainNode
+     - **ConvolverNode**
+       - AudioBuffer buffer = [●] `[-|/\/\/\----]` [Save] Load: [Browse...]
+       - **OscillatorNode**
+
+More types of `AudioNode` are available; see the [Web Audio API spec](https://webaudio.github.io/web-audio-api/) for complete, up-to-date information. Web Audio Tree is designed to automatically accommodate changes to the API, especially new `AudioNode` types.
 
 ## Linux Firefox MIDI workaround ##
 
