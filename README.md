@@ -4,7 +4,7 @@ Web Audio Tree is a GUI for the Web Audio API. You can use it to create a musica
 
 ## Requirements ##
 
-Web Audio Tree uses my [Simple Tree](https://github.com/wdebeaum/simple-tree) library for the collapsible tree view. Run `git submodule update` to get it.
+Web Audio Tree uses my [Simple Tree](https://github.com/wdebeaum/simple-tree) library for the collapsible tree view. Run `make` to get it.
 
 Web Audio Tree requires a web browser that implements the [Web Audio API](https://webaudio.github.io/web-audio-api/). It is somewhat flexible about what version of the API the browser supports, and also tolerates the `webkit` prefix being applied to some names. I know it to work to some extent on recent (as of 2018) versions of Firefox, Chrome, Safari, and other WebKit/Blink-based browsers. It may also work on Edge. Internet Explorer will not work.
 
@@ -205,13 +205,11 @@ I have kind of a hacky workaround for adding just enough MIDI support to Firefox
  - Once:
    - Install [lighttpd](https://www.lighttpd.net/).
    - Install [Node.js](https://nodejs.org/) and its package manager, NPM (which usually comes with it).
-   - In this directory: `npm install websocket`
  - Each time you want to use Web Audio Tree:
-   - In one terminal: `./lighttpd.sh`
-   - In another terminal: `node midi-server.js`
-   - Point Firefox at `http://localhost:11235/wat.html` (don't click "start" yet!).
-   - Open the Web Console in the Web Developer tools (Ctrl+Shift+K).
-   - Paste this there: `var wms = document.createElement('script'); wms.src='web-midi-shim.js'; document.body.appendChild(wms);`
+   - Run `make midi-workaround`
+   - Follow the instructions it gives you.
+ - When you're done using Web Audio Tree:
+   - Press Ctrl+C in the terminal to stop the servers.
 
 Now when you click "start" the Web MIDI API should be detected, and MIDI messages should be read from `/dev/snd/midiC0D0` and passed into Firefox (if you want to use a different device, edit `midi-server.js`).
 
