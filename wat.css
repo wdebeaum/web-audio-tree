@@ -166,6 +166,13 @@ table#keyboard td[colspan="4"] { width: 4em; }
 table#keyboard td[colspan="5"] { width: 4.75em; }
 table#keyboard td[colspan="14"] { width: 10.5em; }
 
+a.help {
+  position: absolute;
+  top: 1em;
+  left: 50%;
+  right: 50%;
+}
+
 ul.status {
   list-style-type: none;
   padding-left: 0px;
