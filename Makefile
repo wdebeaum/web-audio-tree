@@ -1,6 +1,7 @@
 all: simple-tree/simple-tree.js doc
 
 simple-tree/simple-tree.js:
+	git submodule init
 	git submodule update
 
 doc: README.html
