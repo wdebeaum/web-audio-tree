@@ -4,6 +4,8 @@ Web Audio Tree is a GUI for the Web Audio API. You can use it to create a musica
 
 [Web Audio Tree online](https://ssl.uofr.net/~willdb/wat/wat.html)
 
+[GitHub repo](https://github.com/wdebeaum/web-audio-tree)
+
 ## Requirements ##
 
 Web Audio Tree uses my [Simple Tree](https://github.com/wdebeaum/simple-tree) library for the collapsible tree view. Run `make` to get it.
