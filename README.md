@@ -162,15 +162,15 @@ Phase Modulation:
  - AudioDestinationNode destination
    - GainNode carrierGain
      - **DelayNode** phaseDelay
-       - AudioParam delayTime = **1 / (4 * f)** _[delayTime musn't go negative]_
+       - AudioParam delayTime = **1 / (Math.PI * f)** _[delayTime must not go negative]_
          - **GainNode** modulatorGain
-           - AudioParam gain = **1 / (4 * f)**
+           - AudioParam gain = **1 / (Math.PI * f)**
            - **OscillatorNode** modulator
              - AudioParam frequency = **f / 2**
        - Oscillator carrier
          - AudioParam frequency = f
 
-Technically, phase modulation is equivalent to frequency modulation for sine waves, except for a phase shift. And for that reason it was often used to implement "frequency" modulation in synthesizers and sound cards like the Adlib. But those devices don't just use sine waves, so it's not actually equivalent.
+Technically, phase modulation is equivalent to frequency modulation for sine waves, except for a phase shift. And for that reason it was often used to implement "frequency" modulation in synthesizers and sound cards like the Adlib. But those devices don't just use sine waves, so it's not actually equivalent. And note that even for sine waves, the modulator gain is a bit different. The above two examples produce the same sound (except for the phase shift).
 
 You can use a `WaveShaperNode` to give an `OscillatorNode` an arbitrary waveform:
 
