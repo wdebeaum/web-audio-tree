@@ -162,7 +162,7 @@ Phase Modulation:
  - AudioDestinationNode destination
    - GainNode carrierGain
      - **DelayNode** phaseDelay
-       - AudioParam delayTime = **1 / (Math.PI * f)** _[delayTime must not go negative]_
+       - AudioParam delayTime = **1 / (Math.PI * f)** _[delayTime must not go negative; again, we can't see the future]_
          - **GainNode** modulatorGain
            - AudioParam gain = **1 / (Math.PI * f)**
            - **OscillatorNode** modulator
@@ -201,6 +201,27 @@ A similar `AudioBuffer` field exists in the `ConvolverNode`, which can be useful
        - **OscillatorNode**
 
 More types of `AudioNode` are available; see the [Web Audio API spec](https://webaudio.github.io/web-audio-api/) for complete, up-to-date information. Web Audio Tree is designed to automatically accommodate changes to the API, especially new `AudioNode` types.
+
+## Planned Features ##
+
+Some of these features may be implemented in the future:
+
+ - save/load instruments
+ - "copy here" button on references
+ - handle MIDI controller messages, in particular the sustain pedal
+ - conditional node type
+ - variable for MIDI program number (along with selector for non-MIDI input)
+ - better value formula syntax:
+   - no `Math.` prefix on functions
+   - function for converting a pitch interval in semitones to a frequency multiplier
+ - live mic input node type
+ - FFT/waveform display in `AnalyserNode`s
+ - import instruments from:
+   - Adlib data (Rdos `.raw` / DosBox `.dro` / Video Game Music `.vgm` / `.vgz`)
+   - FastTracker II (`.xm` / `.xi`)
+   - SoundFont 2 (`.sf2`)?
+ - export to JavaScript source code (except `AudioBuffer`s?)
+ - record waveform of instrument being played to `.wav` file
 
 ## Linux Firefox MIDI workaround ##
 
