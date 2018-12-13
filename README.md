@@ -8,7 +8,7 @@ Web Audio Tree is a GUI for the Web Audio API. You can use it to create a musica
 
 ## Requirements ##
 
-Web Audio Tree uses my [Simple Tree](https://github.com/wdebeaum/simple-tree) library for the collapsible tree view. Run `make` to get it.
+Web Audio Tree uses my [Simple Tree](https://github.com/wdebeaum/simple-tree) library for the collapsible tree view. It also uses [PEG.js](https://pegjs.org/) for parsing value formulae.  Run `make` to get them, and to generate the value parser and README.html, if you are setting up your own local installation of Web Audio Tree.
 
 Web Audio Tree requires a web browser that implements the [Web Audio API](https://webaudio.github.io/web-audio-api/). It is somewhat flexible about what version of the API the browser supports, and also tolerates the `webkit` prefix being applied to some names. I know it to work to some extent on recent (as of 2018) versions of Firefox, Chrome, Safari, and other WebKit/Blink-based browsers. It may also work on Edge. Internet Explorer will not work.
 
@@ -59,6 +59,8 @@ When setting values for `AudioParam`s, number fields, or automation or schedulin
  - `r` = The **r**elease time in seconds since the `AudioContext` was created.
 
 Note that since we only know `r` after the key was released, it can only be used in scheduling and automation calls, and using it has the side effect that the calls it is used in will be deferred until the key has been released. So you can't, for example, schedule an `OscillatorNode` to stop playing 1 second before the key is released by putting `r-1` in its `stop()` call. This software cannot see the future.
+
+You can also use the constants `π`, `τ`, and `e` (or equivalently `pi`/`PI`, `tau`/`TAU`, and `E`; `τ = 2π`), and any of the functions defined as methods of the [JavaScript Math object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math), without the `Math.` prefix. And you can use the additional function `st()`, which takes a pitch interval in semitones and returns the corresponding frequency multiplier, so e.g. `f*st(3)` is the frequency 3 semitones above the note frequency. Also, `√` can be used instead of `sqrt()`, and multiplication can be written as `*`, `×`, `·`, or juxtaposition. So the following are all equivalent: `PI * sqrt(2)`, `pi × √(2)`, `π√2`. And `^` is the exponentiation operator; `2^3` and `pow(2,3)` both equal `8`.
 
 <span class="TODO">`PeriodicWave` should also be able to use arithmetic/variables, but currently it can't.</span>
 
@@ -162,9 +164,9 @@ Phase Modulation:
  - AudioDestinationNode destination
    - GainNode carrierGain
      - **DelayNode** phaseDelay
-       - AudioParam delayTime = **1 / (Math.PI * f)** _[delayTime must not go negative; again, we can't see the future]_
+       - AudioParam delayTime = **1 / (pi * f)** _[delayTime must not go negative; again, we can't see the future]_
          - **GainNode** modulatorGain
-           - AudioParam gain = **1 / (Math.PI * f)**
+           - AudioParam gain = **1 / (pi * f)**
            - **OscillatorNode** modulator
              - AudioParam frequency = **f / 2**
        - Oscillator carrier
@@ -211,9 +213,6 @@ Some of these features may be implemented in the future:
  - handle MIDI controller messages, in particular the sustain pedal
  - conditional node type
  - variable for MIDI program number (along with selector for non-MIDI input)
- - better value formula syntax:
-   - no `Math.` prefix on functions
-   - function for converting a pitch interval in semitones to a frequency multiplier
  - live mic input node type
  - FFT/waveform display in `AnalyserNode`s
  - import instruments from:

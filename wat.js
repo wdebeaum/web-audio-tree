@@ -673,11 +673,12 @@ function removePeriodicWaveRow(button) {
   }
 }
 
-function makeValueFn(valueExpr) {
-  // TODO!!! validate input.value before passing to eval
+function makeValueFn(valueExpr, startRule) {
+  if (!startRule) { startRule = 'value'; }
+  var jsValueExpr = ValueParser.parse(valueExpr, { startRule: startRule })
   return eval(
     "(function({ n, f, v, o, r }) {\n" +
-    "  return (" + valueExpr + ");\n" +
+    "  return (" + jsValueExpr + ");\n" +
     "})\n"
   );
 }
@@ -729,28 +730,38 @@ function changeLabel(input) {
 function changeFieldValue(input) {
   var subtree = input.parentNode.parentNode.parentNode;
   var field = tree[subtree.id].fields[input.name];
-  switch (field.type) {
-    case 'boolean':
-      field.value = input.checked;
-      break;
-    case 'number':
-      field.value = input.value;
-      field.valueFn = makeValueFn(input.value);
-      break;
-    case 'enum':
-      field.value = input.value;
-      break;
-    case 'Float32Array':
-      field.value = input.value;
-      field.valueFn = makeValueFn('Float32Array.from([' + input.value + '])');
-      break;
+  try {
+    switch (field.type) {
+      case 'boolean':
+	field.value = input.checked;
+	break;
+      case 'number':
+	field.valueFn = makeValueFn(input.value);
+	field.value = input.value;
+	break;
+      case 'enum':
+	field.value = input.value;
+	break;
+      case 'Float32Array':
+	field.valueFn = makeValueFn(input.value, 'array');
+	field.value = input.value;
+	break;
+    }
+  } catch (ex) {
+    alert('invalid field value: ' + ex.message);
+    input.value = field.value;
   }
 }
 
 function changeParamValue(input) {
   var subtree = input.parentNode;
-  tree[subtree.id][input.name] = input.value;
-  tree[subtree.id].valueFn = makeValueFn(input.value);
+  try {
+    tree[subtree.id].valueFn = makeValueFn(input.value);
+    tree[subtree.id][input.name] = input.value;
+  } catch (ex) {
+    alert('invalid parameter value: ' + ex.message);
+    input.value = tree[subtree.id][input.name]
+  }
 }
 
 function changeArg(input) {
@@ -762,8 +773,13 @@ function changeArg(input) {
     }
     sib = sib.previousElementSibling;
   }
-  tree[input.parentNode.id].args[i] = input.value;
-  tree[input.parentNode.id].argFns[i] = makeValueFn(input.value);
+  try {
+    tree[input.parentNode.id].argFns[i] = makeValueFn(input.value);
+    tree[input.parentNode.id].args[i] = input.value;
+  } catch (ex) {
+    alert('invalid argument value: ' + ex.message);
+    input.value = tree[input.parentNode.id].args[i];
+  }
 }
 
 function moveHere(referenceSubtree) {
