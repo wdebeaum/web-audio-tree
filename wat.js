@@ -29,8 +29,11 @@ var ctx;
 var tree = { // map IDs to data structures
   destination: {
     type: 'AudioDestinationNode',
+    label: 'destination',
+    fields: {},
     params: {},
-    children: []
+    children: [],
+    subtree: document.getElementById('destination')
   }
 };
 var nextID = 0;
@@ -225,6 +228,7 @@ function initWebAudio() {
   // place for the children to be created
   var dest = document.getElementById('destination')
   dest.appendChild(cloneNoID(addChildTemplate));
+  dest.appendChild(document.getElementById('save-load-controls'));
   var ul = document.createElement('ul');
   ul.className = 'children';
   dest.appendChild(ul);
@@ -805,6 +809,7 @@ function moveHere(referenceSubtree) {
 function copyHere(referenceSubtree) {
   // TODO replace the reference with a copy of the referent, down to any labeled nodes, which become references to the originals instead of copies
   // (do both DOM nodes and data)
+  // nodeToJSON(original), nodeFromJSON(json), buildLoadedTree(copy) ?
 }
 
 var inputStream;
@@ -986,6 +991,15 @@ function encodeWav(audioBuffer) {
   return wavBytes;
 }
 
+function saveBlob(blob, filename) {
+  var blobURL = URL.createObjectURL(blob);
+  var link = document.getElementById('file-output');
+  link.href = blobURL;
+  link.download = filename;
+  link.innerHTML = filename;
+  link.click();
+}
+
 function saveBuffer(button) {
   var audioBufferLI = button.parentNode;
   var bufferSourceLI = audioBufferLI.parentNode.parentNode;
@@ -995,12 +1009,116 @@ function saveBuffer(button) {
   var audioBuffer = nodeData.fields.buffer.value;
   var wavBytes = encodeWav(audioBuffer);
   var wavBlob = new Blob([wavBytes], { type: 'audio/wav' });
-  var wavURL = URL.createObjectURL(wavBlob);
-  var link = document.getElementById('file-output');
-  link.href = wavURL;
-  link.download = filename;
-  link.innerHTML = filename;
-  link.click();
+  saveBlob(wavBlob, filename);
+}
+
+/*
+ * Save/Load
+ */
+
+function nodeToJSON(nodeData) {
+  var json = { type: nodeData.type };
+  if ('label' in nodeData) json.label = nodeData.label;
+  if ('fields' in nodeData) { // and params
+    json.fields = {};
+    for (var field in nodeData.fields) {
+      if (field != 'PeriodicWave') // FIXME
+	json.fields[field] = nodeData.fields[field].value;
+    }
+    json.params = {};
+    for (var param in nodeData.params) {
+      json.params[param] = {
+	value: nodeData.params[param].value,
+	automation: nodeData.params[param].automation.map(function(autoData) {
+	  return {
+	    fn: autoData.fn,
+	    args: autoData.args
+	  };
+	}),
+	children: nodeData.params[param].children.map(function(childData) {
+	  return childData.subtree.id;
+	})
+      };
+    }
+  }
+  if ('children' in nodeData) {
+    json.children = nodeData.children.map(function(childData) {
+      return childData.subtree.id;
+    });
+  }
+  return json;
+}
+
+function nodeFromJSON(json) {
+  // TODO make full nodeData, including subtree with fields and params, except don't add subtree to its parent yet, and keep children as just ID strings
+}
+
+function buildLoadedTree(nodeData) {
+  // recurse on params
+  for (var param in nodeData.params) {
+    buildLoadedTree(nodeData.params[param]);
+  }
+  // replace child IDs with actual child tree data
+  nodeData.children = nodeData.children.map(function(id) { return tree[id]; });
+  // add child subtrees to this subtree's children, and recurse
+  var ul = nodeData.subtree.querySelector('.children');
+  nodeData.children.forEach(function(childData) {
+    ul.appendChild(childData.subtree);
+    buildLoadedTree(childData);
+  });
+}
+
+function saveTree() {
+  var json = {};
+  for (var label in tree) {
+    // skip AudioParams, automation, and extra labels
+    if ((!('type' in tree[label])) || tree[label].type == 'AudioParam' ||
+        (tree[label].label == label && label != 'destination'))
+      continue;
+    json[label] = nodeToJSON(tree[label]);
+  }
+  var jsonStr = JSON.stringify(json, null, 2);
+  var blob = new Blob([jsonStr], { type: 'application/json' });
+  saveBlob(blob, 'untitled.json'); // TODO use loaded filename if possible
+}
+
+function loadTree(input) {
+  var file = input.files[0];
+  var reader = new FileReader();
+  reader.onload = function(evt) {
+    try {
+      var json = JSON.parse(reader.result);
+      // clear tree (except destination)
+      tree = {
+	destination: {
+	  type: 'AudioDestinationNode',
+	  label: 'destination',
+	  fields: {},
+	  params: {},
+	  children: [],
+	  subtree: document.getElementById('destination')
+	}
+      }
+      document.querySelector('#destination > .children').innerHTML = '';
+      nextID = 0;
+      // fill tree from JSON
+      for (var label in json) {
+	if (/^wat-node-\d+$/.test(label)) {
+	  var idNum = parseInt(label.substring(0, 9));
+	  if (nextID <= idNum)
+	    nextID = idNum + 1;
+	}
+	tree[label] = nodeFromJSON(json[label]);
+	// add extra label
+	if ('label' in tree[label])
+	  tree[tree[label].label] = tree[label];
+      }
+      buildLoadedTree(tree.destination);
+    } catch (ex) {
+      alert('error loading file: ' + ex.message);
+    }
+  };
+  reader.readAsText(file);
 }
 
 /*
