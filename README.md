@@ -74,7 +74,7 @@ Anywhere you can add an `AudioNode` child, you can also add a reference to anoth
 
 You can also use references to move nodes. Just make a reference as above, and then click on its "move here" button. The reference and its referent will switch places. Then you can remove the reference, leaving the referent in its new location in the tree.
 
-<span class="TODO">The "copy here" button is a planned feature that doesn't currently work.</span>
+And you can use references to copy nodes. Clicking the "copy here" button replaces the reference with a deep copy of the referent. Any labeled descendants will be turned into references to the originals instead of copies.
 
 Note that while you can make cycles in the graph using references, the Web Audio API specification says that you must insert a non-zero `DelayNode` in any such cycle. Web Audio Tree does not check for this, but if you break this rule, you might break the program.
 
@@ -211,7 +211,6 @@ More types of `AudioNode` are available; see the [Web Audio API spec](https://we
 Some of these features may be implemented in the future:
 
  - save/load `PeriodicWave` and `AudioBuffer` fields
- - "copy here" button on references
  - handle MIDI controller messages, in particular the sustain pedal
  - conditional node type
  - variable for MIDI program number (along with selector for non-MIDI input)

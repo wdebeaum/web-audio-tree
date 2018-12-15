@@ -356,19 +356,19 @@ function makeChild(typeName) {
 	type: 'number',
 	value: 'o',
 	valueFn: function({ o }) { return o; },
-	set: 'start'
+	set: 'start',
+	subtree: cloneNoID(document.getElementById('start-template'))
       };
-      grandkids.appendChild(
-        cloneNoID(document.getElementById('start-template')));
+      grandkids.appendChild(data.fields.startWhen.subtree);
       // TODO? add offset arg for AudioBufferSourceNode
       data.fields.stopWhen = {
 	type: 'number',
 	value: 'r',
 	valueFn: function({ r }) { return r; },
-	set: 'stop'
+	set: 'stop',
+	subtree: cloneNoID(document.getElementById('stop-template'))
       };
-      grandkids.appendChild(
-        cloneNoID(document.getElementById('stop-template')));
+      grandkids.appendChild(data.fields.stopWhen.subtree);
     }
     var fieldNames = Object.keys(fields).sort();
     fieldNames.forEach(function(name) {
@@ -378,7 +378,8 @@ function makeChild(typeName) {
       data.fields[name] = {
 	type: type,
 	value: nodeTypes[typeName].fields[name].defaultValue,
-	valueFn: function() { return this.value; }
+	valueFn: function() { return this.value; },
+	subtree: field
       };
       if ('set' in nodeTypes[typeName].fields[name]) {
 	data.fields[name].set = nodeTypes[typeName].fields[name].set;
@@ -811,10 +812,70 @@ function moveHere(referenceSubtree) {
   referentParent.children[referentIndex] = reference;
 }
 
+// Recursively copy the subtree under the given node, keeping a map from old to
+// new IDs in idmap. Any lists of children become lists of new IDs. Any labeled
+// nodes (except the top node (idmap undefined)) turn into references to the
+// originals instead of copies.
+// buildLoadedTree should be called after all nodes are copied.
+function copyNode(nodeData, idmap) {
+  var isRoot = (idmap === undefined);
+  if (isRoot) idmap = {};
+  if (nodeData.subtree.id in idmap) { // already copied/referenced
+    return tree[idmap[nodeData.subtree.id]];
+  } else if ((!isRoot) &&
+	     ('label' in nodeData) && nodeData.label != '') { // reference
+    var json = {
+      type: 'reference',
+      label: nodeData.label,
+      fields: {},
+      params: {},
+      children: []
+    };
+    var reference = nodeFromJSON(json);
+    tree[reference.subtree.id] = reference;
+    idmap[nodeData.subtree.id] = reference.subtree.id;
+    return reference;
+  } else { // copy
+    var json = nodeToJSON(nodeData);
+    if (isRoot && ('label' in json)) json.label = '';
+    var copy = nodeFromJSON(json);
+    if ('params' in copy) {
+      for (var param in copy.params) {
+	var paramData = copy.params[param];
+	paramData.children = paramData.children.map(function(oldID) {
+	  var childCopy = copyNode(tree[oldID], idmap);
+	  return childCopy.subtree.id;
+	});
+      }
+    }
+    if ('children' in copy) {
+      copy.children = copy.children.map(function(oldID) {
+	var childCopy = copyNode(tree[oldID], idmap);
+	return childCopy.subtree.id;
+      });
+    }
+    tree[copy.subtree.id] = copy;
+    idmap[nodeData.subtree.id] = copy.subtree.id;
+    return copy;
+  }
+}
+
+// replace the reference with a copy of the referent (using copyNode and
+// buildLoadedTree)
 function copyHere(referenceSubtree) {
-  // TODO replace the reference with a copy of the referent, down to any labeled nodes, which become references to the originals instead of copies
-  // (do both DOM nodes and data)
-  // nodeToJSON(original), nodeFromJSON(json), buildLoadedTree(copy) ?
+  // get relevant variables
+  var reference = tree[referenceSubtree.id];
+  var referent = tree[reference.label];
+  var referenceUL = referenceSubtree.parentNode;
+  var referenceParent = tree[referenceUL.parentNode.id];
+  var referenceIndex = referenceParent.children.indexOf(reference);
+  // make the copy
+  var copy = copyNode(referent);
+  buildLoadedTree(copy);
+  // replace the reference with the copy
+  referenceUL.replaceChild(copy.subtree, referenceSubtree);
+  referenceParent.children[referenceIndex] = copy;
+  delete tree[referenceSubtree.id];
 }
 
 var inputStream;
@@ -1078,11 +1139,20 @@ function nodeFromJSON(json) {
 	var val = json.fields[field];
 	switch (fieldData.type) {
 	  // TODO validate boolean, enum fields?
+	  // TODO handle PeriodicWave, AudioBuffer
+	  case 'boolean':
+	    fieldData.subtree.getElementsByTagName('input')[0].checked = val;
+	    break;
+	  case 'enum':
+	    fieldData.subtree.getElementsByTagName('select')[0].value = val;
+	    break;
 	  case 'number':
 	    fieldData.valueFn = makeValueFn(val);
+	    fieldData.subtree.getElementsByTagName('input')[0].value = val;
 	    break;
 	  case 'Float32Array':
 	    fieldData.valueFn = makeValueFn(val, 'array');
+	    fieldData.subtree.getElementsByTagName('input')[0].value = val;
 	    break;
 	}
 	fieldData.value = val;
