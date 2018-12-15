@@ -166,12 +166,16 @@ table#keyboard td[colspan="4"] { width: 4em; }
 table#keyboard td[colspan="5"] { width: 4.75em; }
 table#keyboard td[colspan="14"] { width: 10.5em; }
 
-a.help {
+ul.nav {
   position: absolute;
-  top: 1em;
+  top: 0;
   left: 50%;
-  right: 50%;
+  -webkit-transform: translateX(-50%);
+  transform: translateX(-50%);
 }
+ul.nav > li { display: inline; }
+ul.nav > li:before { content: ' | '; }
+ul.nav > li:first-child:before { content: ''; }
 
 ul.status {
   list-style-type: none;
