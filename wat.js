@@ -876,6 +876,8 @@ function copyHere(referenceSubtree) {
   referenceUL.replaceChild(copy.subtree, referenceSubtree);
   referenceParent.children[referenceIndex] = copy;
   delete tree[referenceSubtree.id];
+  // make node collapsible
+  updateSubtree(copy.subtree, true);
 }
 
 var inputStream;
@@ -1272,6 +1274,8 @@ function loadTree(input) {
       }
       // build up structure of tree
       buildLoadedTree(tree.destination);
+      // make nodes collapsible
+      updateSubtree(tree.destination.subtree, true);
     } catch (ex) {
       console.error(ex);
       alert('error loading file: ' + ex.message);
