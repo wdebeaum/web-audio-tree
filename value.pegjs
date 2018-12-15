@@ -13,8 +13,8 @@ add
   / mul
 
 mul
-  = lhs:sign rest:(op:[*×·/%]? sp rhs:sign {
-		     if (op == null || !/[\/%]/.test(op)) { op = '*'; }
+  = lhs:sign rest:(op:([*×·/%] / !(sp [+-])) sp rhs:sign {
+		     if (op === undefined || !/[\/%]/.test(op)) { op = '*'; }
 		     return op + ' ' + rhs;
 		   })* {
       return lhs + ' ' + rest.join(' ');
