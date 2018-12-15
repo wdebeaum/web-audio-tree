@@ -1257,7 +1257,7 @@ function loadTree(input) {
       nextID = 0;
       for (var id in json) {
 	if (/^wat-node-\d+$/.test(id)) {
-	  var idNum = parseInt(id.substring(0, 9));
+	  var idNum = parseInt(id.substring(9));
 	  if (nextID <= idNum)
 	    nextID = idNum + 1;
 	}
