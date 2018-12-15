@@ -322,6 +322,14 @@ function addChild(select) {
   select.value = 'add child';
   var parentSubtree = select.parentNode
   var children = parentSubtree.querySelector('.children');
+  var data = makeChild(typeName);
+  tree[data.subtree.id] = data;
+  tree[parentSubtree.id].children.push(data);
+  children.appendChild(data.subtree);
+  updateSubtree(parentSubtree, true);
+}
+
+function makeChild(typeName) {
   var newChild;
   var data = {
     type: typeName,
@@ -464,10 +472,7 @@ function addChild(select) {
     return;
   }
   data.subtree = newChild;
-  tree[newChild.id] = data;
-  tree[parentSubtree.id].children.push(data);
-  children.appendChild(newChild);
-  updateSubtree(parentSubtree, true);
+  return data;
 }
 
 function getDescendantLabels(nodeData, labels) {
@@ -679,7 +684,7 @@ function removePeriodicWaveRow(button) {
 
 function makeValueFn(valueExpr, startRule) {
   if (!startRule) { startRule = 'value'; }
-  var jsValueExpr = ValueParser.parse(valueExpr, { startRule: startRule })
+  var jsValueExpr = ValueParser.parse(''+valueExpr, { startRule: startRule });
   return eval(
     "(function({ n, f, v, o, r }) {\n" +
     "  return (" + jsValueExpr + ");\n" +
@@ -1022,8 +1027,15 @@ function nodeToJSON(nodeData) {
   if ('fields' in nodeData) { // and params
     json.fields = {};
     for (var field in nodeData.fields) {
-      if (field != 'PeriodicWave') // FIXME
-	json.fields[field] = nodeData.fields[field].value;
+      var fieldData = nodeData.fields[field]
+      switch (fieldData.type) {
+	case 'PeriodicWave':
+	case 'AudioBuffer':
+	  // TODO!!!
+	  break;
+	default:
+	  json.fields[field] = fieldData.value;
+      }
     }
     json.params = {};
     for (var param in nodeData.params) {
@@ -1050,7 +1062,77 @@ function nodeToJSON(nodeData) {
 }
 
 function nodeFromJSON(json) {
-  // TODO make full nodeData, including subtree with fields and params, except don't add subtree to its parent yet, and keep children as just ID strings
+  // make full nodeData, including subtree with fields and params, except don't add subtree to its parent yet, and keep children as just ID strings
+  var nodeData =
+    (json.type == 'AudioDestinationNode' ?
+      tree.destination : makeChild(json.type));
+  if ('label' in json) { nodeData.label = json.label; }
+  if ('fields' in json) { // and params
+    for (var field in json.fields) {
+      if (!(field in nodeData.fields)) {
+	console.warn('missing ' + json.type + '#' + field + ' field; skipping');
+	continue;
+      }
+      var fieldData = nodeData.fields[field];
+      try {
+	var val = json.fields[field];
+	switch (fieldData.type) {
+	  // TODO validate boolean, enum fields?
+	  case 'number':
+	    fieldData.valueFn = makeValueFn(val);
+	    break;
+	  case 'Float32Array':
+	    fieldData.valueFn = makeValueFn(val, 'array');
+	    break;
+	}
+	fieldData.value = val;
+      } catch (ex) {
+	console.warn('invalid field value ' + JSON.stringify(val) + ', using default:')
+	console.warn(ex);
+      }
+    }
+    for (var param in json.params) {
+      if (!(param in nodeData.params)) {
+	console.warn('missing ' + json.type + '#' + param + ' param; skipping');
+	continue;
+      }
+      var paramData = nodeData.params[param];
+      var val = json.params[param].value;
+      try {
+	paramData.valueFn = makeValueFn(val);
+	paramData.value = val;
+	paramData.subtree.getElementsByClassName('value')[0].value = val;
+      } catch (ex) {
+	console.warn('invalid parameter value ' + JSON.stringify(val) + ', using default');
+	console.warn(ex);
+      }
+      json.params[param].automation.forEach(function(a) {
+	addAutomation({ value: a.fn, parentNode: paramData.subtree });
+	var autoData = paramData.automation[paramData.automation.length - 1];
+	var argInputs = autoData.subtree.getElementsByClassName('value');
+	if (argInputs.length != a.args.length) {
+	  console.warn('wrong number of arguments for automation ' + a.fn + '; expected ' + argInputs.length + ', but got ' + a.args.length);
+	}
+	for (var i = 0; i < argInputs.length && i < a.args.length; i++) {
+	  var val = a.args[i];
+	  try {
+	    autoData.argFns[i] = makeValueFn(val);
+	    autoData.args[i] = val;
+	    argInputs[i].value = val;
+	  } catch (ex) {
+	    console.warn('invalid argument value ' + JSON.stringify(val) + ':');
+	    console.warn(ex);
+	  }
+	}
+      });
+      // for now; buildLoadedTree will finish
+      nodeData.params[param].children = json.params[param].children;
+    }
+  }
+  if ('children' in json) {
+    nodeData.children = json.children; // for now; buildLoadedTree will finish
+  }
+  return nodeData;
 }
 
 function buildLoadedTree(nodeData) {
@@ -1100,21 +1182,28 @@ function loadTree(input) {
 	}
       }
       document.querySelector('#destination > .children').innerHTML = '';
+      // make sure new IDs don't interfere with loaded ones
+      // FIXME ID inflation
       nextID = 0;
-      // fill tree from JSON
-      for (var label in json) {
-	if (/^wat-node-\d+$/.test(label)) {
-	  var idNum = parseInt(label.substring(0, 9));
+      for (var id in json) {
+	if (/^wat-node-\d+$/.test(id)) {
+	  var idNum = parseInt(id.substring(0, 9));
 	  if (nextID <= idNum)
 	    nextID = idNum + 1;
 	}
-	tree[label] = nodeFromJSON(json[label]);
-	// add extra label
-	if ('label' in tree[label])
-	  tree[tree[label].label] = tree[label];
       }
+      // fill tree nodes from JSON
+      for (var id in json) {
+	tree[id] = nodeFromJSON(json[id]);
+	tree[id].subtree.id = id; // use the ID from JSON instead of the new one
+	// add extra label
+	if (('label' in tree[id]) && tree[id].label != '')
+	  tree[tree[id].label] = tree[id];
+      }
+      // build up structure of tree
       buildLoadedTree(tree.destination);
     } catch (ex) {
+      console.error(ex);
       alert('error loading file: ' + ex.message);
     }
   };

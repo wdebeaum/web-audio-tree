@@ -78,6 +78,8 @@ You can also use references to move nodes. Just make a reference as above, and t
 
 Note that while you can make cycles in the graph using references, the Web Audio API specification says that you must insert a non-zero `DelayNode` in any such cycle. Web Audio Tree does not check for this, but if you break this rule, you might break the program.
 
+You can save the whole tree to a JSON file by clicking the "Save" button next to the root `AudioDestinationNode`. You can later load the tree again by clicking the file input button next to it labeled "Load". When you load a tree from a file, it will replace the currently displayed tree. <span class="TODO">Currently, `PeriodicWave` and `AudioBuffer` fields are not saved.</span>
+
 ### Examples ###
 
 The following are some examples of common patterns you might want to build in Web Audio Tree. Parameters and fields that aren't relevant for the specific example are omitted, and parts you must add or enter are in **bold**. Explanatory comments are added in _[bracketed italics]_.
@@ -208,7 +210,7 @@ More types of `AudioNode` are available; see the [Web Audio API spec](https://we
 
 Some of these features may be implemented in the future:
 
- - save/load instruments
+ - save/load `PeriodicWave` and `AudioBuffer` fields
  - "copy here" button on references
  - handle MIDI controller messages, in particular the sustain pedal
  - conditional node type
