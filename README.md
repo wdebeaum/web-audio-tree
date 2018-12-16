@@ -50,7 +50,7 @@ You can add children to non-source `AudioNode`s, and to `AudioParam`s. In the ca
 
 You can also add automation calls to `AudioParam`s, which lets you schedule smooth (or abrupt) transitions between specific values at specific times. And you can, of course, just set a single value for any `AudioParam` or field.
 
-When setting values for `AudioParam`s, number fields, or automation or scheduling calls, you can use simple arithmetic expressions with these variables:
+When setting values for `AudioParam`s, number fields (including `PeriodicWave` and `Float32Array`), or automation or scheduling calls, you can use simple arithmetic expressions with these variables:
 
  - `n` = The MIDI **n**ote number of the key that was pressed.
  - `f` = The corresponding **f**requency in Hz.
@@ -61,8 +61,6 @@ When setting values for `AudioParam`s, number fields, or automation or schedulin
 Note that since we only know `r` after the key was released, it can only be used in scheduling and automation calls, and using it has the side effect that the calls it is used in will be deferred until the key has been released. So you can't, for example, schedule an `OscillatorNode` to stop playing 1 second before the key is released by putting `r-1` in its `stop()` call. This software cannot see the future.
 
 You can also use the constants `π`, `τ`, and `e` (or equivalently `pi`/`PI`, `tau`/`TAU`, and `E`; `τ = 2π`), and any of the functions defined as methods of the [JavaScript Math object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math), without the `Math.` prefix. And you can use the additional function `st()`, which takes a pitch interval in semitones and returns the corresponding frequency multiplier, so e.g. `f*st(3)` is the frequency 3 semitones above the note frequency. Also, `√` can be used instead of `sqrt()`, and multiplication can be written as `*`, `×`, `·`, or juxtaposition. So the following are all equivalent: `PI * sqrt(2)`, `pi × √(2)`, `π√2`. And `^` is the exponentiation operator; `2^3` and `pow(2,3)` both equal `8`.
-
-<span class="TODO">`PeriodicWave` should also be able to use arithmetic/variables, but currently it can't.</span>
 
 To actually play the instrument you have created by building the tree, you can press, hold, and release keys using one of three methods:
 
@@ -78,7 +76,7 @@ And you can use references to copy nodes. Clicking the "copy here" button replac
 
 Note that while you can make cycles in the graph using references, the Web Audio API specification says that you must insert a non-zero `DelayNode` in any such cycle. Web Audio Tree does not check for this, but if you break this rule, you might break the program.
 
-You can save the whole tree to a JSON file by clicking the "Save" button next to the root `AudioDestinationNode`. You can later load the tree again by clicking the file input button next to it labeled "Load". When you load a tree from a file, it will replace the currently displayed tree. <span class="TODO">Currently, `PeriodicWave` and `AudioBuffer` fields are not saved.</span>
+You can save the whole tree to a JSON file by clicking the "Save" button next to the root `AudioDestinationNode`. You can later load the tree again by clicking the file input button next to it labeled "Load". When you load a tree from a file, it will replace the currently displayed tree. <span class="TODO">Currently, `AudioBuffer` fields are not saved.</span>
 
 ### Examples ###
 
@@ -210,7 +208,7 @@ More types of `AudioNode` are available; see the [Web Audio API spec](https://we
 
 Some of these features may be implemented in the future:
 
- - save/load `PeriodicWave` and `AudioBuffer` fields
+ - save/load `AudioBuffer` fields
  - handle MIDI controller messages, in particular the sustain pedal
  - conditional node type
  - variable for MIDI program number (along with selector for non-MIDI input)

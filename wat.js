@@ -140,6 +140,7 @@ function initWebAudio() {
 		  console.log(typeName + '#' + param + '(' + paramCreate + '(' + args + '))');
 		  nodeTypes[typeName].fields[paramTypeName] = {
 		    type: paramTypeName,
+		    defaultValue: null,
 		    create: paramCreate,
 		    set: param
 		  };
@@ -621,46 +622,54 @@ function moveAutomation(button) {
   }
 }
 
-// TODO? allow variables in PeriodicWave values
 function updatePeriodicWave(table) {
   var subtree = table.parentNode.parentNode.parentNode.parentNode;
   var data = tree[subtree.id];
-  var real = [];
-  var imag = [];
-  var isImag = false;
+  var valueExprs = [];
+  // NodeList, y u no have map?
   table.querySelectorAll('input').forEach(function(input) {
-    if (isImag) {
-      imag.push(parseFloat(input.value));
-    } else {
-      real.push(parseFloat(input.value));
-    }
-    isImag = !isImag;
+    valueExprs.push(input.value);
   });
   var select = subtree.querySelector("select[name='type']");
-  if (real.length == 0) { // no PeriodicWave
+  if (valueExprs.length == 0) { // no PeriodicWave
     // reenable the select and set it to the default value, if we had a
     // PeriodicWave before
-    if (data.fields.PeriodicWave.value !== undefined) {
-      data.fields.type = nodeTypes.OscillatorNode.fields.type.defaultValue;
-      select.value = data.fields.type;
+    if (data.fields.PeriodicWave.value !== null) {
+      data.fields.type.value =
+        nodeTypes.OscillatorNode.fields.type.defaultValue;
+      select.value = data.fields.type.value;
       select.disabled = false;
     }
     // unset the PeriodicWave
-    data.fields.PeriodicWave.value = undefined;
+    data.fields.PeriodicWave.valueFn = function() { return this.value; }
+    data.fields.PeriodicWave.value = null;
   } else { // some PeriodicWave
+    // make the PeriodicWave valueFn
+    data.fields.PeriodicWave.valueFn = makeValueFn(valueExprs, 'PeriodicWave');
+    data.fields.PeriodicWave.value = valueExprs;
     // set type='custom' and disable the select
-    data.fields.type = 'custom';
-    select.value = data.fields.type;
+    data.fields.type.value = 'custom';
+    select.value = data.fields.type.value;
     select.disabled = true;
-    // make the PeriodicWave
-    data.fields.PeriodicWave.value =
-      ctx.createPeriodicWave(Float32Array.from(real), Float32Array.from(imag));
   }
 }
 
 function changePeriodicWaveValue(input) {
   var table = input.parentNode.parentNode.parentNode;
-  updatePeriodicWave(table);
+  try {
+    updatePeriodicWave(table);
+  } catch (ex) {
+    console.error(ex);
+    alert('invalid PeriodicWave value: ' + ex.message);
+    // set the input value back to what it was
+    var subtree = table.parentNode.parentNode.parentNode.parentNode;
+    var data = tree[subtree.id];
+    var i =
+      table.querySelectorAll('input').
+      findIndex(function(inp) { return (inp === input); });
+    if (i >= 0)
+      input.value = data.fields.PeriodicWave.value[i];
+  }
 }
 
 function addPeriodicWaveRow(button) {
@@ -670,7 +679,12 @@ function addPeriodicWaveRow(button) {
   var newRow = cloneNoID(rowTemplate);
   newRow.children[0].innerHTML = table.children.length - 2;
   table.insertBefore(newRow, buttonRow);
-  updatePeriodicWave(table);
+  try {
+    updatePeriodicWave(table);
+  } catch (ex) {
+    console.error(ex);
+    alert('something went wrong adding a PeriodicWave row: ' + ex.message);
+  }
 }
 
 function removePeriodicWaveRow(button) {
@@ -679,13 +693,44 @@ function removePeriodicWaveRow(button) {
   var rowToRemove = buttonRow.previousElementSibling;
   if (rowToRemove) {
     rowToRemove.remove();
-    updatePeriodicWave(table);
+    try {
+      updatePeriodicWave(table);
+    } catch (ex) {
+      console.error(ex);
+      alert('something went wrong removing a PeriodicWave row: ' + ex.message);
+    }
   }
 }
 
-function makeValueFn(valueExpr, startRule) {
-  if (!startRule) { startRule = 'value'; }
-  var jsValueExpr = ValueParser.parse(''+valueExpr, { startRule: startRule });
+function makeValueFn(valueExpr, expectedType) {
+  if (!expectedType) { expectedType = 'value'; }
+  var jsValueExpr;
+  switch (expectedType) {
+    // case 'AudioBuffer': // TODO?
+    case 'PeriodicWave':
+      // in this case, valueExpr is an array of expressions in the order they
+      // appear as input fields in the document
+      if (valueExpr.length % 2 != 0)
+	throw new Error('expected even number of PeriodicWave elements');
+      var real = [];
+      var imag = [];
+      for (var i = 0; i < valueExpr.length; i += 2) {
+	real.push(ValueParser.parse(''+valueExpr[i], {startRule: 'value'}));
+	imag.push(ValueParser.parse(''+valueExpr[i+1], {startRule: 'value'}));
+      }
+      jsValueExpr =
+        'ctx.createPeriodicWave(' +
+	  'new Float32Array([' + real.join(', ') + ']), ' +
+	  'new Float32Array([' + imag.join(', ') + '])' +
+	')';
+      break;
+    case 'value': // fall through
+    case 'array':
+      jsValueExpr = ValueParser.parse(''+valueExpr, {startRule: expectedType});
+      break;
+    default:
+      throw new Error('unknown expression type: ' + expectedType);
+  }
   return eval(
     "(function({ n, f, v, o, r }) {\n" +
     "  return (" + jsValueExpr + ");\n" +
@@ -1092,7 +1137,6 @@ function nodeToJSON(nodeData) {
     for (var field in nodeData.fields) {
       var fieldData = nodeData.fields[field]
       switch (fieldData.type) {
-	case 'PeriodicWave':
 	case 'AudioBuffer':
 	  // TODO!!!
 	  break;
@@ -1141,7 +1185,6 @@ function nodeFromJSON(json) {
 	var val = json.fields[field];
 	switch (fieldData.type) {
 	  // TODO validate boolean, enum fields?
-	  // TODO handle PeriodicWave, AudioBuffer
 	  case 'boolean':
 	    fieldData.subtree.getElementsByTagName('input')[0].checked = val;
 	    break;
@@ -1156,6 +1199,30 @@ function nodeFromJSON(json) {
 	    fieldData.valueFn = makeValueFn(val, 'array');
 	    fieldData.subtree.getElementsByTagName('input')[0].value = val;
 	    break;
+	  case 'PeriodicWave':
+	    if (val !== null) {
+	      fieldData.valueFn = makeValueFn(val, 'PeriodicWave');
+	      var buttonRow =
+		fieldData.subtree.
+		getElementsByClassName('PeriodicWave-buttons')[0].
+		parentNode;
+	      var table = buttonRow.parentNode;
+	      var rowTemplate =
+		document.getElementById('PeriodicWave-row-template');
+	      for (var i = 0; i < val.length; i += 2) {
+		var newRow = cloneNoID(rowTemplate);
+		newRow.children[0].innerHTML = i/2;
+		table.insertBefore(newRow, buttonRow);
+		var inputs = newRow.getElementsByTagName('input');
+		inputs[0].value = val[i];
+		inputs[1].value = val[i+1];
+	      }
+	      var select =
+		nodeData.subtree.querySelector("select[name='type']");
+	      select.disabled = true;
+	    }
+	    break;
+	  // case 'AudioBuffer': // TODO
 	}
 	fieldData.value = val;
       } catch (ex) {
@@ -1361,7 +1428,7 @@ function PlayingNote(noteNum, velocity, onset) {
     if (field.value != '') {
       var val = field.valueFn(this.vars);
       if ('set' in field) {
-	if (val !== undefined) {
+	if (val !== null) {
 	  audioNode[field.set](val);
 	}
       } else {
