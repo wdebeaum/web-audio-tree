@@ -1,8 +1,8 @@
 value
-  = add
+  = sp a:add { return a; }
 
 array
-  = first:value rest:(',' sp v:value {return v;})* {
+  = sp first:value rest:(',' sp v:value {return v;})* {
       return 'Float32Array.from([' + [first, ...rest].join(', ') + '])';
     }
 
@@ -56,7 +56,7 @@ function_name
   / '√' sp arg:atom { return 'Math.sqrt(' + arg + ')'; }
 
 variable
-  = [nfvor]
+  = v:[nfvor] sp { return v; }
 
 constant
   = ('pi' / 'PI' / 'π') { return 'Math.PI'; }
