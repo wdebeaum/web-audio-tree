@@ -1,0 +1,61 @@
+{
+  "destination": {
+    "type": "AudioDestinationNode",
+    "label": "destination",
+    "fields": {},
+    "params": {},
+    "children": [
+      "wat-node-0"
+    ]
+  },
+  "wat-node-0": {
+    "type": "GainNode",
+    "label": "",
+    "fields": {},
+    "params": {
+      "gain": {
+        "value": "0.1",
+        "automation": [],
+        "children": []
+      }
+    },
+    "children": [
+      "wat-node-2"
+    ]
+  },
+  "wat-node-2": {
+    "type": "WaveShaperNode",
+    "label": "",
+    "fields": {
+      "curve": "-1, -0.2, 0, 0.8, 1",
+      "oversample": "none"
+    },
+    "params": {},
+    "children": [
+      "wat-node-5"
+    ]
+  },
+  "wat-node-5": {
+    "type": "OscillatorNode",
+    "label": "",
+    "fields": {
+      "startWhen": "o",
+      "stopWhen": "r",
+      "PeriodicWave": null,
+      "type": "triangle"
+    },
+    "params": {
+      "detune": {
+        "value": 0,
+        "automation": [],
+        "children": []
+      },
+      "frequency": {
+        "value": "f",
+        "automation": [],
+        "children": []
+      }
+    },
+    "children": []
+  }
+}

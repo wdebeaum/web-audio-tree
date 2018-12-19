@@ -103,8 +103,9 @@ Or you can make the envelope more complex:
  - AudioDestinationNode destination
    - GainNode
      - AudioParam gain = **0** _[start at 0]_
-       - **linearRampToValueAtTime(0.2, o + 0.01)** _[attack, reaching 0.2 at time o + 0.01]_
-       - **setTargetAtTime(0.1, o, 0.3)** _[decay and sustain at 0.1]_
+       - **setValueAtTime(0, o)** _[no, really, [Firefox](https://github.com/WebAudio/web-audio-api/issues/341), start at 0]_
+       - **linearRampToValueAtTime(0.2, o + 0.05)** _[attack, reaching 0.2 at time o + 0.05]_
+       - **setTargetAtTime(0.1, o + 0.05, 0.3)** _[decay and sustain at 0.1]_
        - **setTargetAtTime(0, r, 0.3)** _[release to 0]_
      - OscillatorNode
        - stop(r **+ 5**) _[stop playing 5 seconds after key is released]_

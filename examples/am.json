@@ -1,0 +1,89 @@
+{
+  "destination": {
+    "type": "AudioDestinationNode",
+    "label": "destination",
+    "fields": {},
+    "params": {},
+    "children": [
+      "wat-node-0"
+    ]
+  },
+  "wat-node-0": {
+    "type": "GainNode",
+    "label": "carrierGain",
+    "fields": {},
+    "params": {
+      "gain": {
+        "value": "0.1",
+        "automation": [],
+        "children": [
+          "wat-node-2"
+        ]
+      }
+    },
+    "children": [
+      "wat-node-9"
+    ]
+  },
+  "wat-node-2": {
+    "type": "GainNode",
+    "label": "modulatorGain",
+    "fields": {},
+    "params": {
+      "gain": {
+        "value": "0.05",
+        "automation": [],
+        "children": []
+      }
+    },
+    "children": [
+      "wat-node-4"
+    ]
+  },
+  "wat-node-4": {
+    "type": "OscillatorNode",
+    "label": "modulator",
+    "fields": {
+      "startWhen": "o",
+      "stopWhen": "r",
+      "PeriodicWave": null,
+      "type": "sine"
+    },
+    "params": {
+      "detune": {
+        "value": 0,
+        "automation": [],
+        "children": []
+      },
+      "frequency": {
+        "value": "f/2",
+        "automation": [],
+        "children": []
+      }
+    },
+    "children": []
+  },
+  "wat-node-9": {
+    "type": "OscillatorNode",
+    "label": "carrier",
+    "fields": {
+      "startWhen": "o",
+      "stopWhen": "r",
+      "PeriodicWave": null,
+      "type": "sine"
+    },
+    "params": {
+      "detune": {
+        "value": 0,
+        "automation": [],
+        "children": []
+      },
+      "frequency": {
+        "value": "f",
+        "automation": [],
+        "children": []
+      }
+    },
+    "children": []
+  }
+}
