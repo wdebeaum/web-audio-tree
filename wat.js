@@ -1044,27 +1044,44 @@ function drawBuffer(canvas, buffer) {
   }
 }
 
-function loadBuffer(input) {
-		   // input label      li buffer
-  var audioBufferLI = input.parentNode.parentNode;
+function loadBuffer(audioBufferLI, arrayBuffer) {
   var canvas = audioBufferLI.querySelector('.waveform');
 				// ul.children li ABSN    id
   var nodeData = tree[audioBufferLI.parentNode.parentNode.id];
-  var file = input.files[0];
-  var reader = new FileReader();
-  reader.onload = function(evt) {
-    var audioData = evt.target.result;
-    ctx.decodeAudioData(audioData).
+  return ctx.decodeAudioData(arrayBuffer).
     then(function(buffer) {
       nodeData.fields.buffer.value = buffer;
       drawBuffer(canvas, buffer);
-    }).
+    })
+}
+
+function loadBufferFromFile(input) {
+		   // input label      li buffer
+  var audioBufferLI = input.parentNode.parentNode;
+  var file = input.files[0];
+  var reader = new FileReader();
+  reader.onload = function(evt) {
+    loadBuffer(audioBufferLI, evt.target.result).
     catch(function(err) {
       console.error('failed to decode audio data:');
       console.error(err);
     });
   };
   reader.readAsArrayBuffer(file);
+}
+
+function loadBufferFromURL(button) {
+  var input = button.previousElementSibling;
+  var audioBufferLI = button.parentNode;
+  fetch(input.value).then(function(response) {
+    return response.arrayBuffer().
+      then(function(arrayBuffer) {
+	loadBuffer(audioBufferLI, arrayBuffer)
+      });
+  }).catch(function(err) {
+    console.error(err);
+    alert('error fetching file:' + err);
+  });
 }
 
 // encode AudioBuffer data as a wav file in a Uint8Array
@@ -1303,52 +1320,66 @@ function saveTree() {
   saveBlob(blob, 'untitled.json'); // TODO use loaded filename if possible
 }
 
-function loadTree(input) {
+function loadTree(jsonStr) {
+  try {
+    var json = JSON.parse(jsonStr);
+    // clear tree (except destination)
+    tree = {
+      destination: {
+	type: 'AudioDestinationNode',
+	label: 'destination',
+	fields: {},
+	params: {},
+	children: [],
+	subtree: document.getElementById('destination')
+      }
+    }
+    document.querySelector('#destination > .children').innerHTML = '';
+    // make sure new IDs don't interfere with loaded ones
+    // FIXME ID inflation
+    nextID = 0;
+    for (var id in json) {
+      if (/^wat-node-\d+$/.test(id)) {
+	var idNum = parseInt(id.substring(9));
+	if (nextID <= idNum)
+	  nextID = idNum + 1;
+      }
+    }
+    // fill tree nodes from JSON
+    for (var id in json) {
+      tree[id] = nodeFromJSON(json[id]);
+      tree[id].subtree.id = id; // use the ID from JSON instead of the new one
+      // add extra label
+      if (('label' in tree[id]) && tree[id].label != '')
+	tree[tree[id].label] = tree[id];
+    }
+    // build up structure of tree
+    buildLoadedTree(tree.destination);
+    // make nodes collapsible
+    updateSubtree(tree.destination.subtree, true);
+  } catch (ex) {
+    console.error(ex);
+    alert('error loading file: ' + ex.message);
+  }
+}
+
+function loadTreeFromFile(input) {
   var file = input.files[0];
   var reader = new FileReader();
   reader.onload = function(evt) {
-    try {
-      var json = JSON.parse(reader.result);
-      // clear tree (except destination)
-      tree = {
-	destination: {
-	  type: 'AudioDestinationNode',
-	  label: 'destination',
-	  fields: {},
-	  params: {},
-	  children: [],
-	  subtree: document.getElementById('destination')
-	}
-      }
-      document.querySelector('#destination > .children').innerHTML = '';
-      // make sure new IDs don't interfere with loaded ones
-      // FIXME ID inflation
-      nextID = 0;
-      for (var id in json) {
-	if (/^wat-node-\d+$/.test(id)) {
-	  var idNum = parseInt(id.substring(9));
-	  if (nextID <= idNum)
-	    nextID = idNum + 1;
-	}
-      }
-      // fill tree nodes from JSON
-      for (var id in json) {
-	tree[id] = nodeFromJSON(json[id]);
-	tree[id].subtree.id = id; // use the ID from JSON instead of the new one
-	// add extra label
-	if (('label' in tree[id]) && tree[id].label != '')
-	  tree[tree[id].label] = tree[id];
-      }
-      // build up structure of tree
-      buildLoadedTree(tree.destination);
-      // make nodes collapsible
-      updateSubtree(tree.destination.subtree, true);
-    } catch (ex) {
-      console.error(ex);
-      alert('error loading file: ' + ex.message);
-    }
+    loadTree(reader.result);
   };
   reader.readAsText(file);
+}
+
+function loadTreeFromURL(button) {
+  var input = button.previousElementSibling;
+  fetch(input.value).then(function(response) {
+    return response.text().then(loadTree);
+  }).catch(function(err) {
+    console.error(err);
+    alert('error fetching file:' + err);
+  });
 }
 
 /*

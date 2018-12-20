@@ -16,7 +16,7 @@ Some browsers on some platforms have a large amount of audio latency. For exampl
 
 Although not required, Web Audio Tree can also make use of the [Web MIDI API](http://webaudio.github.io/web-midi-api/) to receive note on/off messages from a MIDI controller. But not all browsers that support the Web Audio API also support MIDI. In particular, Firefox does not yet support it (they seem to be [a bit hung up](https://github.com/mozilla/standards-positions/issues/58) on the security implications of SysEx messages, nevermind that I don't use those...). Chrome does support MIDI (it only allows SysEx in secure contexts (HTTPS), with a user prompt). See below for a workaround for Firefox on Linux, though.
 
-And Web Audio Tree can make use of the [Media Capture and Streams API](https://www.w3.org/TR/mediacapture-streams/) for microphone input to record into an `AudioBuffer`. Again, this is not required. You can also load an audio file from your computer into an `AudioBuffer`.
+And Web Audio Tree can make use of the [Media Capture and Streams API](https://www.w3.org/TR/mediacapture-streams/) for microphone input to record into an `AudioBuffer`. Again, this is not required. You can also load an audio file into an `AudioBuffer` from your computer or from the web.
 
 ## <a name="usage">Usage</a> ##
 
@@ -76,7 +76,7 @@ And you can use references to copy nodes. Clicking the "copy here" button replac
 
 Note that while you can make cycles in the graph using references, the Web Audio API specification says that you must insert a non-zero `DelayNode` in any such cycle. Web Audio Tree does not check for this, but if you break this rule, you might break the program.
 
-You can save the whole tree to a JSON file by clicking the "Save" button next to the root `AudioDestinationNode`. You can later load the tree again by clicking the file input button next to it labeled "Load". When you load a tree from a file, it will replace the currently displayed tree. <span class="TODO">Currently, `AudioBuffer` fields are not saved.</span>
+You can save the whole tree to a JSON file by clicking the "Save..." button next to the root `AudioDestinationNode`. You can later load the tree again by clicking the "Load file..." button next to it. You can also load a JSON file from a web address by entering the address and clicking the "Load URL" button (this can be a relative address, such as `examples/sine-organ.json`). When you load a tree from a file, it will replace the currently displayed tree. <span class="TODO">Currently, `AudioBuffer` fields are not saved.</span>
 
 ### Examples ###
 
@@ -186,11 +186,11 @@ You can use a `WaveShaperNode` to give an `OscillatorNode` an arbitrary waveform
 
 In this example, the `WaveShaperNode`'s `curve` effectively moves the points on the `triangle` wave where it crosses -0.5 and 0.5, up to -0.2 and 0.8, respectively, while leaving the points where it touches -1, 0, and 1 alone.
 
-You can use an `AudioBufferSourceNode` instead of an `OscillatorNode`, to play a sound loaded from a file (by clicking the file input button labeled "Load"), or a sound you record from your microphone (by clicking the record button to start recording, and then clicking it again to stop).
+You can use an `AudioBufferSourceNode` instead of an `OscillatorNode`, to play a sound loaded from a file (by clicking the button labeled "Load file...") or from the web (by entering the web address and clicking the button labeled "Load URL"), or a sound you record from your microphone (by clicking the record button to start recording, and then clicking it again to stop).
 
  - AudioDestinationNode destination
    - **AudioBufferSourceNode**
-     - AudioBuffer buffer = **[●]** `[-|/\/\/\----]` [Save] Load: **[Browse...]**
+     - AudioBuffer buffer = **[●]** `[-|/\/\/\----]` [Save...] **[Load file...] [http://...____] [Load URL]**
      - AudioParam playbackRate = **f / 440**
 
 To use such a recording as an instrument, you should put the note frequency variable `f` into the `playbackRate` parameter, divided by the actual frequency of the original sound (A440 in this case). Note that unlike the `OscillatorNode`, the `AudioBufferSourceNode` doesn't automatically play the sound as loudly as it can, just at its original volume. So a `GainNode` might not be necessary here.
@@ -200,7 +200,7 @@ A similar `AudioBuffer` field exists in the `ConvolverNode`, which can be useful
  - AudioDestinationNode destination
    - GainNode
      - **ConvolverNode**
-       - AudioBuffer buffer = [●] `[-|/\/\/\----]` [Save] Load: [Browse...]
+       - AudioBuffer buffer = [●] `[-|/\/\/\----]` [Save...] [Load file...] [http://...____] [Load URL]
        - **OscillatorNode**
 
 More types of `AudioNode` are available; see the [Web Audio API spec](https://webaudio.github.io/web-audio-api/) for complete, up-to-date information. Web Audio Tree is designed to automatically accommodate changes to the API, especially new `AudioNode` types.
@@ -209,7 +209,7 @@ More types of `AudioNode` are available; see the [Web Audio API spec](https://we
 
 Some of these features may be implemented in the future:
 
- - save/load `AudioBuffer` fields
+ - save/load `AudioBuffer` fields as part of JSON save format
  - handle MIDI controller messages, in particular the sustain pedal
  - conditional node type
  - variable for MIDI program number (along with selector for non-MIDI input)

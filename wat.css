@@ -21,6 +21,28 @@ input.label, input.value {
   display: none;
 }
 
+.load, .save {
+  font-family: sans-serif;
+  font-size: small;
+  background-image: linear-gradient(#f7f7f7, #d7d7d7);
+  border: 2px outset #ffffff;
+  box-shadow: 0 0 0 1.2px #7f7f7f;
+  padding-left: 1ex;
+  padding-right: 1ex;
+  padding-top: 0.25ex;
+  padding-bottom: 0.25ex;
+}
+
+.load:active, .save:active {
+  background-image: linear-gradient(#d7d7d7, #f7f7f7);
+  border: 2px inset #ffffff;
+}
+
+label.load > input {
+  width: 1px;
+  height: 1px;
+}
+
 button.close {
   width: 2em;
   height: 2em;
