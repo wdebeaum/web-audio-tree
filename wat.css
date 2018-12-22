@@ -1,20 +1,36 @@
-input.label, input.value {
+input.label, input.value, .enum {
   height: 2em;
-  padding: 0px;
-  border: 1px solid black;
+  padding-left: 4px;
+  padding-right: 2px;
+  padding-top: 0px;
+  padding-bottom: 0px;
+  border: none;
+  box-shadow: 1px 1px 2px 1px inset #7f7f7f;
+  box-sizing: content-box;
+  background-color: white;
 }
 
-.add-child, .enum {
+input.label:disabled {
+  background-color: inherit;
+}
+
+.add-child {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
   color: yellow;
   background-color: navy;
+  background-image: linear-gradient(#2f2fff, navy);
   height: 2em;
-  border: 1px solid black;
+  border: 2px outset #2f2fff;
+  box-shadow: 0 0 0 1.2px #7f7f7f;
   box-sizing: content-box;
+  margin: 1px;
 }
 
-.enum:disabled {
-  color: #ffff7f;
-  background-color: #7f7fff;
+.add-child:active {
+  background-image: linear-gradient(navy, #2f2fff);
+  border: 2px inset #2f2fff;
 }
 
 .add-child > option:first-child {
@@ -46,31 +62,41 @@ label.load > input {
 button.close {
   width: 2em;
   height: 2em;
-  padding: 3px;
-  border: 1px solid black;
+  padding: 2px;
+  margin: 1px;
+  border: 2px outset #ff7f7f;
   color: white;
   background-color: red;
+  background-image: linear-gradient(#ff7f7f, red);
+  box-shadow: 0 0 0 1.2px #7f7f7f;
 }
 
 button.close:active {
-  background-color: black;
+  background-image: linear-gradient(red, #ff7f7f);
+  border: 2px inset #ff7f7f;
 }
 
 button.record, button.stop {
   width: 2em;
   height: 2em;
   padding: 3px;
-  border: 1px solid black;
 }
 
 button.record {
   color: red;
-  background-color: black;
+  border-width: 2px;
+  border-style: solid;
+  background-color: #111;
+  border-top-color: #555;
+  border-left-color: #555;
+  border-bottom-color: #000;
+  border-right-color: #000;
 }
 
 button.stop {
   /* content: '■'; doesn't work */
   color: black;
+  border: 2px inset #ff7f7f;
   background-color: red;
 }
 
@@ -81,14 +107,17 @@ button.narrow {
 button.narrow, button.ref {
   height: 2em;
   padding: 3px;
-  border: 1px solid black;
   color: yellow;
   background-color: navy;
+  background-image: linear-gradient(#2f2fff, navy);
+  border: 2px outset #2f2fff;
+  box-shadow: 0 0 0 1.2px #7f7f7f;
+  margin: 1px;
 }
 
 button.narrow:active, button.ref:active {
-  color: navy;
-  background-color: yellow;
+  background-image: linear-gradient(navy, #2f2fff);
+  border: 2px inset #2f2fff;
 }
 
 canvas.waveform {
@@ -108,9 +137,17 @@ table.PeriodicWave-table th, td.PeriodicWave-buttons {
 #start {
   height: 2em;
   padding: 3px;
-  border: 1px solid black;
+  border: 2px outset #7fff3f;
   color: black;
   background-color: lime;
+  background-image: linear-gradient(#7fff3f, lime);
+  box-shadow: 0 0 0 1.2px #7f7f7f;
+  margin: 1px;
+}
+
+#start:active {
+  border: 2px inset #3fff3f;
+  background-image: linear-gradient(lime, #3fff3f);
 }
 
 .invisible {
