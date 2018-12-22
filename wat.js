@@ -1190,7 +1190,10 @@ function nodeFromJSON(json) {
   var nodeData =
     (json.type == 'AudioDestinationNode' ?
       tree.destination : makeChild(json.type));
-  if ('label' in json) { nodeData.label = json.label; }
+  if ('label' in json) {
+    nodeData.label = json.label;
+    nodeData.subtree.getElementsByClassName('label')[0].value = json.label;
+  }
   if ('fields' in json) { // and params
     for (var field in json.fields) {
       if (!(field in nodeData.fields)) {
