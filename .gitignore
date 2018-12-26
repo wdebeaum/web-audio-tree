@@ -4,3 +4,4 @@ package-lock.json
 node_modules/
 old/
 value-parser.js
+base64js.min.js

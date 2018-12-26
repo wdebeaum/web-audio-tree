@@ -995,12 +995,12 @@ function drawBuffer(canvas, buffer) {
   var minSample = 1;
   var maxSample = -1;
   for (var x = 0; x < waveformWidth; x++) {
+    var startInChannel = numSamplesPerChannelColumn * x;
     // get all samples from all channels for this column into columnSamples
     for (var c = 0; c < buffer.numberOfChannels; c++) {
       var start = numSamplesPerChannelColumn * c;
       var end = start + numSamplesPerChannelColumn;
       var channelSamples = columnSamples.subarray(start, end);
-      var startInChannel = numSamplesPerColumn * x;
       buffer.copyFromChannel(channelSamples, c, startInChannel);
     }
     for (var s = 0; s < numSamplesPerColumn; s++) {
@@ -1010,12 +1010,12 @@ function drawBuffer(canvas, buffer) {
   }
   var sampleRange = maxSample - minSample;
   for (var x = 0; x < waveformWidth; x++) {
+    var startInChannel = numSamplesPerChannelColumn * x;
     // get all samples from all channels for this column into columnSamples
     for (var c = 0; c < buffer.numberOfChannels; c++) {
       var start = numSamplesPerChannelColumn * c;
       var end = start + numSamplesPerChannelColumn;
       var channelSamples = columnSamples.subarray(start, end);
-      var startInChannel = numSamplesPerColumn * x;
       buffer.copyFromChannel(channelSamples, c, startInChannel);
     }
     // make a histogram of sample values with one bin per pixel, using the
@@ -1044,15 +1044,18 @@ function drawBuffer(canvas, buffer) {
   }
 }
 
-function loadBuffer(audioBufferLI, arrayBuffer) {
+function loadBuffer(audioBufferLI, arrayBuffer, fieldData) {
   var canvas = audioBufferLI.querySelector('.waveform');
-				// ul.children li ABSN    id
-  var nodeData = tree[audioBufferLI.parentNode.parentNode.id];
+  if (fieldData === undefined) {
+				  // ul.children li ABSN    id
+    var nodeData = tree[audioBufferLI.parentNode.parentNode.id];
+    fieldData = nodeData.fields.buffer;
+  }
   return ctx.decodeAudioData(arrayBuffer).
     then(function(buffer) {
-      nodeData.fields.buffer.value = buffer;
+      fieldData.value = buffer;
       drawBuffer(canvas, buffer);
-    })
+    });
 }
 
 function loadBufferFromFile(input) {
@@ -1065,6 +1068,7 @@ function loadBufferFromFile(input) {
     catch(function(err) {
       console.error('failed to decode audio data:');
       console.error(err);
+      console.error(err.stack);
     });
   };
   reader.readAsArrayBuffer(file);
@@ -1152,10 +1156,11 @@ function nodeToJSON(nodeData) {
   if ('fields' in nodeData) { // and params
     json.fields = {};
     for (var field in nodeData.fields) {
-      var fieldData = nodeData.fields[field]
+      var fieldData = nodeData.fields[field];
       switch (fieldData.type) {
 	case 'AudioBuffer':
-	  // TODO!!!
+	  var wavBytes = encodeWav(fieldData.value);
+	  json.fields[field] = base64js.fromByteArray(wavBytes);
 	  break;
 	default:
 	  json.fields[field] = fieldData.value;
@@ -1242,7 +1247,11 @@ function nodeFromJSON(json) {
 	      select.disabled = true;
 	    }
 	    break;
-	  // case 'AudioBuffer': // TODO
+	  case 'AudioBuffer':
+	    var arrayBuffer = Uint8Array.from(base64js.toByteArray(val)).buffer;
+	    loadBuffer(fieldData.subtree, arrayBuffer, fieldData);
+	    val = fieldData.value;
+	    break;
 	}
 	fieldData.value = val;
       } catch (ex) {

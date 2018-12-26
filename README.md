@@ -8,7 +8,7 @@ Web Audio Tree is a GUI for the Web Audio API. You can use it to create a musica
 
 ## Requirements ##
 
-Web Audio Tree uses my [Simple Tree](https://github.com/wdebeaum/simple-tree) library for the collapsible tree view. It also uses [PEG.js](https://pegjs.org/) for parsing value formulae.  Run `make` to get them, and to generate the value parser and README.html, if you are setting up your own local installation of Web Audio Tree.
+Web Audio Tree uses my [Simple Tree](https://github.com/wdebeaum/simple-tree) library for the collapsible tree view. It also uses [PEG.js](https://pegjs.org/) for parsing value formulae. Run `make` to get them, and to generate the value parser and README.html, if you are setting up your own local installation of Web Audio Tree. Making README.html requires Ruby and the [github-markup gem](https://github.com/github/markup), but if it fails that won't prevent the rest of Web Audio Tree from working.
 
 Web Audio Tree requires a web browser that implements the [Web Audio API](https://webaudio.github.io/web-audio-api/). It is somewhat flexible about what version of the API the browser supports, and also tolerates the `webkit` prefix being applied to some names. I know it to work to some extent on recent (as of 2018) versions of Firefox, Chrome, Safari, and other WebKit/Blink-based browsers. It may also work on Edge. Internet Explorer will not work.
 
@@ -76,7 +76,7 @@ And you can use references to copy nodes. Clicking the "copy here" button replac
 
 Note that while you can make cycles in the graph using references, the Web Audio API specification says that you must insert a non-zero `DelayNode` in any such cycle. Web Audio Tree does not check for this, but if you break this rule, you might break the program.
 
-You can save the whole tree to a JSON file by clicking the "Save..." button next to the root `AudioDestinationNode`. You can later load the tree again by clicking the "Load file..." button next to it. You can also load a JSON file from a web address by entering the address and clicking the "Load URL" button (this can be a relative address, such as `examples/sine-organ.json`). When you load a tree from a file, it will replace the currently displayed tree. <span class="TODO">Currently, `AudioBuffer` fields are not saved.</span>
+You can save the whole tree to a JSON file by clicking the "Save..." button next to the root `AudioDestinationNode`. You can later load the tree again by clicking the "Load file..." button next to it. You can also load a JSON file from a web address by entering the address and clicking the "Load URL" button (this can be a relative address, such as `examples/sine-organ.json`). When you load a tree from a file, it will replace the currently displayed tree.
 
 ### Examples ###
 
@@ -209,7 +209,6 @@ More types of `AudioNode` are available; see the [Web Audio API spec](https://we
 
 Some of these features may be implemented in the future:
 
- - save/load `AudioBuffer` fields as part of JSON save format
  - handle MIDI controller messages, in particular the sustain pedal
  - conditional node type
  - variable for MIDI program number (along with selector for non-MIDI input)

@@ -1,4 +1,4 @@
-all: simple-tree/simple-tree.js value-parser.js doc
+all: simple-tree/simple-tree.js value-parser.js base64js.min.js doc
 
 simple-tree/simple-tree.js:
 	git submodule init
@@ -10,10 +10,19 @@ value-parser.js: value.pegjs node_modules/pegjs/package.json
 	  --allowed-start-rules value,array \
 	  -o $@ $<
 
+base64js.min.js: node_modules/base64-js/package.json
+	cp node_modules/base64-js/$@ ./
+
 doc: README.html
 
 README.html: md2html.rb README.md
-	./$+ >$@
+	if ./$+ >$@ ; \
+	then true ; \
+	else \
+	  rm -f $@ ; \
+	  echo ; \
+	  echo "Making README.html failed, but that's OK, everything else will still work. If you really want README.html, make sure you have Ruby and the github-markup gem installed." ; \
+	fi
 
 midi-workaround: node_modules/websocket/package.json simple-tree/simple-tree.js
 	( \
@@ -26,3 +35,5 @@ midi-workaround: node_modules/websocket/package.json simple-tree/simple-tree.js
 node_modules/%/package.json:
 	npm install $*
 
+clean:
+	rm -f value-parser.js base64js.min.js README.html
