@@ -62,6 +62,8 @@ Note that since we only know `r` after the key was released, it can only be used
 
 You can also use the constants `π`, `τ`, and `e` (or equivalently `pi`/`PI`, `tau`/`TAU`, and `E`; `τ = 2π`), and any of the functions defined as methods of the [JavaScript Math object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math), without the `Math.` prefix. And you can use the additional function `st()`, which takes a pitch interval in semitones and returns the corresponding frequency multiplier, so e.g. `f*st(3)` is the frequency 3 semitones above the note frequency. Also, `√` can be used instead of `sqrt()`, and multiplication can be written as `*`, `×`, `·`, or juxtaposition. So the following are all equivalent: `PI * sqrt(2)`, `pi × √(2)`, `π√2`. And `^` is the exponentiation operator; `2^3` and `pow(2,3)` both equal `8`.
 
+You can also use conditionals `if(condition)`, `elif(condition)`, and `else` (in that order), which each evaluate to `1` if the branch is taken, `0` otherwise. Otherwise they work the same as conditional nodes (see below). For example, if you want the frequency of an oscillator to be `f*2` for notes below A440 (MIDI note number 69), but `f` for other notes, you could set the frequency to the expression `if(n<69)*f*2 + else*f`.
+
 To actually play the instrument you have created by building the tree, you can press, hold, and release keys using one of three methods:
 
  - Press the corresponding keys on your computer's keyboard. Use the diagram below the tree to show you which keys to press. This gives you a little over two octaves, with the q key being middle C. Note that the two rows overlap: ,-/ and q-e are the same notes. Also note that, while you can get polyphony by holding multiple keys, many computer keyboards are unable to detect certain combinations of keypresses, so one or more of the notes in a given chord may not sound.
@@ -75,6 +77,10 @@ You can also use references to move nodes. Just make a reference as above, and t
 And you can use references to copy nodes. Clicking the "copy here" button replaces the reference with a deep copy of the referent. Any labeled descendants will be turned into references to the originals instead of copies.
 
 Note that while you can make cycles in the graph using references, the Web Audio API specification says that you must insert a non-zero `DelayNode` in any such cycle. Web Audio Tree does not check for this, but if you break this rule, you might break the program.
+
+Also anywhere you can add an `AudioNode` child, you can also add a conditional node, one of `if`, `elif`, or `else`. The children of a conditional node are only used if the branch is taken. The `if` and `elif` nodes accept a condition, which is a boolean expression. Boolean expressions include `true` and `false`, and can be built up from value expressions using comparison and logical operators. Comparison operators include `<`, `<=`, `=`, `>=`, and `>`, and `<=` and `>=` can also be written as `≤` and `≥`, respectively. The logical operators are `and`, `or`, and `not`. An `if` branch is taken if its condition is true. An `elif` branch is taken if no previous `if` or `elif` branch was taken, and its condition is true. An `else` branch is taken if no previous `if` or `elif` branch was taken. `elif` and `else` only look back as far as the previous `if`, and it's possible to nest conditionals when they are nodes. It is not possible to nest conditionals in value expressions, but they won't interfere with conditional nodes.
+
+You should not put the referent of a reference under a conditional node, since the referent might not be created, and then the reference will fail. <span class="TODO">This might be fixed in a later version. For now, one workaround is to put the referent under a top-level `GainNode` with `gain` set to 0, and use reference nodes everywhere it's actually needed, including under conditional nodes.</span>
 
 You can save the whole tree to a JSON file by clicking the "Save..." button next to the root `AudioDestinationNode`. You can later load the tree again by clicking the "Load file..." button next to it. You can also load a JSON file from a web address by entering the address and clicking the "Load URL" button (this can be a relative address, such as `examples/sine-organ.json`). When you load a tree from a file, it will replace the currently displayed tree.
 
@@ -203,6 +209,8 @@ A similar `AudioBuffer` field exists in the `ConvolverNode`, which can be useful
        - AudioBuffer buffer = [●] `[-|/\/\/\----]` [Save...] [Load file...] [http://...____] [Load URL]
        - **OscillatorNode**
 
+<span class="TODO">[More examples needed, especially for references and conditionals.]</span>
+
 More types of `AudioNode` are available; see the [Web Audio API spec](https://webaudio.github.io/web-audio-api/) for complete, up-to-date information. Web Audio Tree is designed to automatically accommodate changes to the API, especially new `AudioNode` types.
 
 ## Planned Features ##
@@ -210,7 +218,6 @@ More types of `AudioNode` are available; see the [Web Audio API spec](https://we
 Some of these features may be implemented in the future:
 
  - handle MIDI controller messages, in particular the sustain pedal
- - conditional node type
  - variable for MIDI program number (along with selector for non-MIDI input)
  - live mic input node type
  - FFT/waveform display in `AnalyserNode`s

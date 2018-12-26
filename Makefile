@@ -7,7 +7,7 @@ simple-tree/simple-tree.js:
 value-parser.js: value.pegjs node_modules/pegjs/package.json
 	node_modules/pegjs/bin/pegjs \
 	  --format globals --export-var ValueParser \
-	  --allowed-start-rules value,array \
+	  --allowed-start-rules condition,value,array \
 	  -o $@ $<
 
 base64js.min.js: node_modules/base64-js/package.json

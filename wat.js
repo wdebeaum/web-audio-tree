@@ -341,6 +341,21 @@ function makeChild(typeName) {
   };
   if (typeName == 'reference') {
     newChild = cloneNewID(document.getElementById('reference-template'));
+  } else if (['if','elif','else'].includes(typeName)) {
+    newChild = cloneNewID(document.getElementById('audio-node-template'));
+    newChild.firstChild.innerHTML = typeName;
+    var input = newChild.getElementsByClassName('label')[0];
+    if (typeName == 'else') {
+      input.parentNode.removeChild(input);
+    } else {
+      data.value = 'false';
+      data.valueFn = function() { return false; }
+      input.value = data.value;
+      input.className = 'value';
+      input.placeholder = 'condition';
+      input.name = 'condition';
+      input.setAttribute('onchange', 'changeCondition(this)');
+    }
   } else if (typeName in nodeTypes) {
     newChild = cloneNewID(document.getElementById('audio-node-template'));
     newChild.firstChild.innerHTML = typeName;
@@ -726,6 +741,7 @@ function makeValueFn(valueExpr, expectedType) {
       break;
     case 'value': // fall through
     case 'array':
+    case 'condition':
       jsValueExpr = ValueParser.parse(''+valueExpr, {startRule: expectedType});
       break;
     default:
@@ -780,6 +796,18 @@ function changeLabel(input) {
     }
   }
   data[input.name] = input.value;
+}
+
+function changeCondition(input) {
+  var subtree = input.parentNode;
+  var data = tree[subtree.id];
+  try {
+    data.valueFn = makeValueFn(input.value, 'condition');
+    data.value = input.value;
+  } catch (ex) {
+    alert('invalid condition: ' + ex.message);
+    input.value = data.value;
+  }
 }
 
 function changeFieldValue(input) {
@@ -1187,6 +1215,9 @@ function nodeToJSON(nodeData) {
       return childData.subtree.id;
     });
   }
+  if ('value' in nodeData) { // conditional
+    json.value = nodeData.value;
+  }
   return json;
 }
 
@@ -1299,6 +1330,16 @@ function nodeFromJSON(json) {
   }
   if ('children' in json) {
     nodeData.children = json.children; // for now; buildLoadedTree will finish
+  }
+  if ('value' in json) { // conditional
+    var val = json.value;
+    try {
+      nodeData.valueFn = makeValueFn(val, 'condition');
+      nodeData.value = val;
+    } catch (ex) {
+      console.warn('invalid condition ' + JSON.stringify(val) + ':');
+      console.warn(ex);
+    }
   }
   return nodeData;
 }
@@ -1438,6 +1479,36 @@ function PlayingNote(noteNum, velocity, onset) {
 	  that.audioNodes[nodeData.label].disconnect();
 	}
       };
+    } else if (['if', 'elif', 'else'].includes(nodeData.type)) { // conditional
+      // make a GainNode to represent this conditional node
+      var audioNode = ctx.createGain();
+      audioNode.gain.value = 1; // just in case the spec changes
+      // find out whether we should instantiate the children
+      var val = false;
+      switch (nodeData.type) {
+	case 'if':
+	  val = window.isPrevCondTrue = nodeData.valueFn(this.vars);
+	  break;
+	case 'elif':
+	  if (!window.isPrevCondTrue)
+	    val = window.isPrevCondTrue = nodeData.valueFn(this.vars);
+	  break;
+	case 'else':
+	  val = !window.isPrevCondTrue;
+	  break;
+      }
+      // instantiate the children
+      if (val) {
+	// save isPrevCondTrue
+	var oldIsPrevCondTrue = window.isPrevCondTrue;
+	window.isPrevCondTrue = false; // no previous conds among children
+	nodeData.children.forEach(function(c) {
+	  this.instantiateNode(c).connect(audioNode);
+	}, this);
+	// restore old isPrevCondTrue
+	window.isPrevCondTrue = oldIsPrevCondTrue;
+      }
+      return audioNode;
     } else { // ordinary AudioNode
       var typeData = nodeTypes[nodeData.type]
       var audioNode = ctx[typeData.create]();
@@ -1447,6 +1518,8 @@ function PlayingNote(noteNum, velocity, onset) {
       if (typeData.isScheduled) {
 	this.scheduledNodes.push([audioNode, nodeData]);
       }
+      // save isPrevCondTrue (so nested conditions don't leak out)
+      var oldIsPrevCondTrue = window.isPrevCondTrue;
       for (var fieldName in nodeData.fields) {
 	// don't set schedule here, and don't set type when a PeriodicWave has
 	// already been set (spec says that's an error)
@@ -1459,9 +1532,12 @@ function PlayingNote(noteNum, velocity, onset) {
       for (var paramName in nodeData.params) {
 	this.instantiateParam(audioNode, paramName, nodeData);
       }
+      window.isPrevCondTrue = false; // no previous conds among children
       nodeData.children.forEach(function(c) {
 	this.instantiateNode(c).connect(audioNode);
       }, this);
+      // restore old isPrevCondTrue
+      window.isPrevCondTrue = oldIsPrevCondTrue;
       return audioNode;
     }
   },
@@ -1469,6 +1545,7 @@ function PlayingNote(noteNum, velocity, onset) {
   function instantiateField(audioNode, fieldName, nodeData) {
     var field = nodeData.fields[fieldName];
     if (field.value != '') {
+      window.isPrevCondTrue = false;
       var val = field.valueFn(this.vars);
       if ('set' in field) {
 	if (val !== null) {
@@ -1484,6 +1561,7 @@ function PlayingNote(noteNum, velocity, onset) {
     var paramData = nodeData.params[paramName];
     var audioParam = audioNode[paramName];
     if (paramData.value != '') {
+      window.isPrevCondTrue = false;
       audioParam.value = paramData.valueFn(this.vars);
     }
     paramData.automation.forEach(function(a) {
@@ -1499,13 +1577,19 @@ function PlayingNote(noteNum, velocity, onset) {
 	this.instantiateAutomation(audioParam, a);
       }
     }, this);
+    window.isPrevCondTrue = false;
     paramData.children.forEach(function(c) {
       this.instantiateNode(c).connect(audioParam);
     }, this);
   },
 
   function instantiateAutomation(audioParam, autoData) {
-    audioParam[autoData.fn].apply(audioParam, autoData.argFns.map(function(fn) { return fn(this.vars); }, this));
+    audioParam[autoData.fn].apply(audioParam,
+      autoData.argFns.map(function(fn) {
+	window.isPrevCondTrue = false;
+	return fn(this.vars);
+      }, this)
+    );
   },
 
   function start() {
