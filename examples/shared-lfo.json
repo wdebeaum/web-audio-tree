@@ -1,0 +1,122 @@
+{
+  "destination": {
+    "type": "AudioDestinationNode",
+    "label": "destination",
+    "fields": {},
+    "params": {},
+    "children": [
+      "wat-node-0"
+    ]
+  },
+  "wat-node-0": {
+    "type": "GainNode",
+    "label": "",
+    "fields": {},
+    "params": {
+      "gain": {
+        "value": "0.1",
+        "automation": [],
+        "children": []
+      }
+    },
+    "children": [
+      "wat-node-2",
+      "wat-node-7"
+    ]
+  },
+  "wat-node-2": {
+    "type": "OscillatorNode",
+    "label": "",
+    "fields": {
+      "startWhen": "o",
+      "stopWhen": "r",
+      "PeriodicWave": null,
+      "type": "sine"
+    },
+    "params": {
+      "detune": {
+        "value": 0,
+        "automation": [],
+        "children": []
+      },
+      "frequency": {
+        "value": "f",
+        "automation": [],
+        "children": [
+          "wat-node-12"
+        ]
+      }
+    },
+    "children": []
+  },
+  "wat-node-7": {
+    "type": "OscillatorNode",
+    "label": "",
+    "fields": {
+      "startWhen": "o",
+      "stopWhen": "r",
+      "PeriodicWave": null,
+      "type": "square"
+    },
+    "params": {
+      "detune": {
+        "value": 0,
+        "automation": [],
+        "children": []
+      },
+      "frequency": {
+        "value": "f",
+        "automation": [],
+        "children": [
+          "wat-node-19"
+        ]
+      }
+    },
+    "children": []
+  },
+  "wat-node-12": {
+    "type": "GainNode",
+    "label": "lfo",
+    "fields": {},
+    "params": {
+      "gain": {
+        "value": "f/100",
+        "automation": [],
+        "children": []
+      }
+    },
+    "children": [
+      "wat-node-14"
+    ]
+  },
+  "wat-node-14": {
+    "type": "OscillatorNode",
+    "label": "",
+    "fields": {
+      "startWhen": "o",
+      "stopWhen": "r",
+      "PeriodicWave": null,
+      "type": "sine"
+    },
+    "params": {
+      "detune": {
+        "value": 0,
+        "automation": [],
+        "children": []
+      },
+      "frequency": {
+        "value": "5",
+        "automation": [],
+        "children": []
+      }
+    },
+    "children": []
+  },
+  "wat-node-19": {
+    "type": "reference",
+    "label": "lfo",
+    "fields": {},
+    "params": {},
+    "children": []
+  }
+}

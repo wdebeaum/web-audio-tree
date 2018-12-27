@@ -1,0 +1,141 @@
+{
+  "destination": {
+    "type": "AudioDestinationNode",
+    "label": "destination",
+    "fields": {},
+    "params": {},
+    "children": [
+      "wat-node-0",
+      "wat-node-10"
+    ]
+  },
+  "wat-node-0": {
+    "type": "if",
+    "label": "",
+    "fields": {},
+    "params": {},
+    "children": [
+      "wat-node-1"
+    ],
+    "value": "n<60"
+  },
+  "wat-node-1": {
+    "type": "GainNode",
+    "label": "",
+    "fields": {},
+    "params": {
+      "gain": {
+        "value": "0.2",
+        "automation": [
+          {
+            "fn": "setTargetAtTime",
+            "args": [
+              "0.1",
+              "o",
+              "0.1"
+            ]
+          },
+          {
+            "fn": "setTargetAtTime",
+            "args": [
+              "0",
+              "r",
+              "0.1"
+            ]
+          }
+        ],
+        "children": []
+      }
+    },
+    "children": [
+      "wat-node-5"
+    ]
+  },
+  "wat-node-5": {
+    "type": "OscillatorNode",
+    "label": "",
+    "fields": {
+      "startWhen": "o",
+      "stopWhen": "r+1",
+      "PeriodicWave": null,
+      "type": "sawtooth"
+    },
+    "params": {
+      "detune": {
+        "value": 0,
+        "automation": [],
+        "children": []
+      },
+      "frequency": {
+        "value": "f",
+        "automation": [],
+        "children": []
+      }
+    },
+    "children": []
+  },
+  "wat-node-10": {
+    "type": "else",
+    "label": "",
+    "fields": {},
+    "params": {},
+    "children": [
+      "wat-node-11"
+    ]
+  },
+  "wat-node-11": {
+    "type": "GainNode",
+    "label": "",
+    "fields": {},
+    "params": {
+      "gain": {
+        "value": "0.1",
+        "automation": [
+          {
+            "fn": "setTargetAtTime",
+            "args": [
+              "0",
+              "o",
+              "0.5"
+            ]
+          },
+          {
+            "fn": "setTargetAtTime",
+            "args": [
+              "0",
+              "r",
+              "0.1"
+            ]
+          }
+        ],
+        "children": []
+      }
+    },
+    "children": [
+      "wat-node-15"
+    ]
+  },
+  "wat-node-15": {
+    "type": "OscillatorNode",
+    "label": "",
+    "fields": {
+      "startWhen": "o",
+      "stopWhen": "r+1",
+      "PeriodicWave": null,
+      "type": "sine"
+    },
+    "params": {
+      "detune": {
+        "value": 0,
+        "automation": [],
+        "children": []
+      },
+      "frequency": {
+        "value": "f",
+        "automation": [],
+        "children": []
+      }
+    },
+    "children": []
+  }
+}

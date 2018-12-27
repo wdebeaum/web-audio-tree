@@ -40,6 +40,8 @@ For more information on the API, including a complete list of the different type
 
 To start using Web Audio Tree, click the green "start" button. This will attempt to create an `AudioContext`, and then attempt to connect to your computer's first MIDI input port. The results of these attempts are visible in the API status area in the top right; a green checkmark means success, a red X means your browser doesn't support the relevant API, and a yellow question mark means either the attempt wasn't made for some reason, or you do have the API but it didn't work (this can happen if you don't have a MIDI input port). Only the green checkmark next to "Web Audio API" is required.
 
+#### Building the tree ####
+
 To start with, you are given the root of the tree, the `AudioDestinationNode` labeled "destination". This corresponds to the `destination` field of the `AudioContext`, and it is where audio data flows to in order to play it out of the speakers. When you click the "start" button, the button is replaced with an "add child" menu. All `AudioNode`s with an input have this menu. Selecting an `AudioNode` type from this menu will add an instance of that type as a child, which is to say the child's output will be connected to the parent's input. You can remove a child by clicking on the red X button to its right.
 
 It's usually a good idea to start with a `GainNode`, and set its `gain` parameter down from 1 to something like 0.1, to avoid playing the maximum volume level from any `OscillatorNode`s you might add.
@@ -49,6 +51,8 @@ Note that when you add an `AudioNode` child, it will usually come with children 
 You can add children to non-source `AudioNode`s, and to `AudioParam`s. In the case of `AudioParam`s, the output audio of the child will affect the effective value of the parameter for each audio sample frame (for a-rate parameters) or quantum of 128 frames (for k-rate parameters).
 
 You can also add automation calls to `AudioParam`s, which lets you schedule smooth (or abrupt) transitions between specific values at specific times. And you can, of course, just set a single value for any `AudioParam` or field.
+
+#### Value expressions ####
 
 When setting values for `AudioParam`s, number fields (including `PeriodicWave` and `Float32Array`), or automation or scheduling calls, you can use simple arithmetic expressions with these variables:
 
@@ -64,11 +68,15 @@ You can also use the constants `π`, `τ`, and `e` (or equivalently `pi`/`PI`, `
 
 You can also use conditionals `if(condition)`, `elif(condition)`, and `else` (in that order), which each evaluate to `1` if the branch is taken, `0` otherwise. Otherwise they work the same as conditional nodes (see below). For example, if you want the frequency of an oscillator to be `f*2` for notes below A440 (MIDI note number 69), but `f` for other notes, you could set the frequency to the expression `if(n<69)*f*2 + else*f`.
 
+#### Playing the instrument ####
+
 To actually play the instrument you have created by building the tree, you can press, hold, and release keys using one of three methods:
 
  - Press the corresponding keys on your computer's keyboard. Use the diagram below the tree to show you which keys to press. This gives you a little over two octaves, with the q key being middle C. Note that the two rows overlap: ,-/ and q-e are the same notes. Also note that, while you can get polyphony by holding multiple keys, many computer keyboards are unable to detect certain combinations of keypresses, so one or more of the notes in a given chord may not sound.
  - Click on the key diagram with your mouse or other pointing device. You can't get polyphony this way, but you can drag the mouse across the keys to change which note is being played.
  - Connect a MIDI keyboard (or other MIDI controller) to your computer and press its keys. This will only work if there is a green checkmark next to "Web MIDI API" in the top right corner, and your device is connected to the first MIDI input port your computer has (however it defines "first"). Only note on/off messages are supported, so e.g. a sustain pedal isn't going to work. <span class="TODO">Making sustain pedals work is a planned feature.</span>
+
+#### Reference nodes ####
 
 Anywhere you can add an `AudioNode` child, you can also add a reference to another `AudioNode` already in the tree. Make sure the node you plan to refer to (the "referent") has a label by entering one in the text box to the right of the node type. Then add a "reference" child somewhere else, and enter the same label in its text box. The referent's output will be connected to both parents' inputs.
 
@@ -78,15 +86,21 @@ And you can use references to copy nodes. Clicking the "copy here" button replac
 
 Note that while you can make cycles in the graph using references, the Web Audio API specification says that you must insert a non-zero `DelayNode` in any such cycle. Web Audio Tree does not check for this, but if you break this rule, you might break the program.
 
+#### Conditional nodes ####
+
 Also anywhere you can add an `AudioNode` child, you can also add a conditional node, one of `if`, `elif`, or `else`. The children of a conditional node are only used if the branch is taken. The `if` and `elif` nodes accept a condition, which is a boolean expression. Boolean expressions include `true` and `false`, and can be built up from value expressions using comparison and logical operators. Comparison operators include `<`, `<=`, `=`, `>=`, and `>`, and `<=` and `>=` can also be written as `≤` and `≥`, respectively. The logical operators are `and`, `or`, and `not`. An `if` branch is taken if its condition is true. An `elif` branch is taken if no previous `if` or `elif` branch was taken, and its condition is true. An `else` branch is taken if no previous `if` or `elif` branch was taken. `elif` and `else` only look back as far as the previous `if`, and it's possible to nest conditionals when they are nodes. It is not possible to nest conditionals in value expressions, but they won't interfere with conditional nodes.
 
 You should not put the referent of a reference under a conditional node, since the referent might not be created, and then the reference will fail. <span class="TODO">This might be fixed in a later version. For now, one workaround is to put the referent under a top-level `GainNode` with `gain` set to 0, and use reference nodes everywhere it's actually needed, including under conditional nodes.</span>
+
+#### Saving and loading the tree ####
 
 You can save the whole tree to a JSON file by clicking the "Save..." button next to the root `AudioDestinationNode`. You can later load the tree again by clicking the "Load file..." button next to it. You can also load a JSON file from a web address by entering the address and clicking the "Load URL" button (this can be a relative address, such as `examples/sine-organ.json`). When you load a tree from a file, it will replace the currently displayed tree.
 
 ### Examples ###
 
 The following are some examples of common patterns you might want to build in Web Audio Tree. Parameters and fields that aren't relevant for the specific example are omitted, and parts you must add or enter are in **bold**. Explanatory comments are added in _[bracketed italics]_.
+
+#### Oscillators and envelopes ####
 
 First, probably the simplest possible thing that's actually playable as an instrument: a sine-wave organ.
 
@@ -140,6 +154,8 @@ You can also construct an arbitrary periodic wave by specifying complex amplitud
 
 Note that when you add rows to the `PeriodicWave` table, the `type` automatically switches to `custom`. If you delete all the rows, it switches back to `sine`.
 
+#### Modulation ####
+
 You can make interesting sounds using various kinds of modulation, connecting additional oscillators to parameters.
 
 Amplitude Modulation (AM):
@@ -181,6 +197,8 @@ Phase Modulation:
 
 Technically, phase modulation is equivalent to frequency modulation for sine waves, except for a phase shift. And for that reason it was often used to implement "frequency" modulation in synthesizers and sound cards like the Adlib. But those devices don't just use sine waves, so it's not actually equivalent. And note that even for sine waves, the modulator gain is a bit different. The above two examples produce the same sound (except for the phase shift).
 
+#### Wave shapes and buffers ####
+
 You can use a `WaveShaperNode` to give an `OscillatorNode` an arbitrary waveform:
 
  - AudioDestinationNode destination
@@ -209,7 +227,58 @@ A similar `AudioBuffer` field exists in the `ConvolverNode`, which can be useful
        - AudioBuffer buffer = [●] `[-|/\/\/\----]` [Save...] [Load file...] [http://...____] [Load URL]
        - **OscillatorNode**
 
-<span class="TODO">[More examples needed, especially for references and conditionals.]</span>
+#### Conditionals ####
+
+You can use conditionals to make different instruments for different parts of the keyboard. For example, you can make all the keys below middle C (MIDI note number 60) use a sawtooth organ, and the rest of the keys (i.e. middle C and above) use a sine piano:
+
+ - **if n < 60** _[if note is below middle C...]_
+   - **GainNode**
+     - AudioParam gain = **0.2** _[...use an organ-like envelope...]_
+       - **setTargetAtTime(0.1, o, 0.1)**
+       - **setTargetAtTime(0, r, 0.1)**
+     - **OscillatorNode**
+       - stop(**r + 1**)
+       - enum type = **sawtooth** _[...and a sawtooth waveform.]_
+ - **else** _[if note is not below middle C...]_
+   - **GainNode**
+     - AudioParam gain = **0.1** _[...use a piano-like envelope...]_
+       - **setTargetAtTime(0, o, 0.5)**
+       - **setTargetAtTime(0, r, 0.1)**
+     - **OscillatorNode**
+       - stop(**r + 1**)
+       - enum type = sine _[...and the default sine waveform.]_
+
+#### References enable non-tree-shaped graphs ####
+
+You can use references to make graphs that aren't strictly tree shaped. For example, you can make two parallel oscillators share the same LFO modulating their frequency:
+
+ - **GainNode**
+   - **Oscillator**
+     - enum type = sine
+     - AudioParam frequency = **f**
+       - **GainNode lfo** _[the referent, labeled "lfo"]_
+         - AudioParam gain = **f/100**
+         - **Oscillator**
+           - AudioParam frequency = **5**
+   - **Oscillator**
+     - enum type = **square**
+     - AudioParam frequency = **f**
+       - **from lfo** _[the reference. The audio data comes **from** the node labeled "lfo"]_
+
+You can even make a feedback loop, though you must include a `DelayNode`:
+
+ - **GainNode**
+   - **Oscillator carrier** _[the referent]_
+     - AudioParam frequency = **f**
+       - **GainNode**
+         - AudioParam gain = **f/4**
+	 - **DelayNode**
+	   - AudioParam delayTime = **10/f**
+	     - **from carrier** _[the reference]_
+
+Here, the output of the `carrier` is delayed by 10 wavelengths, then used to modulate its own frequency.
+
+#### More in the spec ####
 
 More types of `AudioNode` are available; see the [Web Audio API spec](https://webaudio.github.io/web-audio-api/) for complete, up-to-date information. Web Audio Tree is designed to automatically accommodate changes to the API, especially new `AudioNode` types.
 
