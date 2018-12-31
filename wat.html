@@ -99,6 +99,10 @@
   <label class="load">Load file...<input type="file" onchange="loadBufferFromFile(this)"></label>
   <input class="value" placeholder="http://...">
   <button class="load" onclick="loadBufferFromURL(this)">Load URL</button>
+ <li id="AnalyserNode-data-template" class="field subtree expanded"><span class="node"></span>
+  <div class="children">
+   <canvas class="waveform" width="512" height="256"></canvas>
+  </div>
 </ul>
 <span id="save-load-controls">
 <button class="save" onclick="saveTree()">Save...</button>

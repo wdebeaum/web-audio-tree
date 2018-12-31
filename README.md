@@ -289,7 +289,6 @@ Some of these features may be implemented in the future:
  - handle MIDI controller messages, in particular the sustain pedal
  - variable for MIDI program number (along with selector for non-MIDI input)
  - live mic input node type
- - FFT/waveform display in `AnalyserNode`s
  - import instruments from:
    - Adlib data (Rdos `.raw` / DosBox `.dro` / Video Game Music `.vgm` / `.vgz`)
    - FastTracker II (`.xm` / `.xi`)

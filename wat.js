@@ -364,6 +364,15 @@ function makeChild(typeName) {
       newChild.classList.add('source');
     }
     var grandkids = newChild.getElementsByClassName('children')[0];
+    // AnalyserNode output data
+    if (typeName == 'AnalyserNode') {
+      var freqSubtree = cloneNoID(document.getElementById('AnalyserNode-data-template'));
+      freqSubtree.firstChild.innerHTML = 'Uint8Array frequencyData';
+      grandkids.appendChild(freqSubtree);
+      var timeSubtree = cloneNoID(document.getElementById('AnalyserNode-data-template'));
+      timeSubtree.firstChild.innerHTML = 'Uint8Array timeDomainData';
+      grandkids.appendChild(timeSubtree);
+    }
     // non-AudioParam fields
     var fields = nodeTypes[typeName].fields;
     // start()/end() calls for scheduled nodes (as fake fields)
@@ -1461,6 +1470,7 @@ function PlayingNote(noteNum, velocity, onset) {
     n.connect(ctx.destination);
   });
   this.referenceTasks.forEach(function(fn) { fn(); });
+  this.isEnded = false;
   this.start();
 }
 
@@ -1517,6 +1527,14 @@ function PlayingNote(noteNum, velocity, onset) {
       }
       if (typeData.isScheduled) {
 	this.scheduledNodes.push([audioNode, nodeData]);
+      }
+      if (nodeData.type == 'AnalyserNode') {
+	var grandkids = nodeData.subtree.getElementsByClassName('children')[0];
+	var freqCanvas =
+	  grandkids.children[0].getElementsByTagName('canvas')[0];
+	var timeCanvas =
+	  grandkids.children[1].getElementsByTagName('canvas')[0];
+	requestAnimationFrame(this.drawAnalysis.bind(this, freqCanvas, timeCanvas, audioNode));
       }
       // save isPrevCondTrue (so nested conditions don't leak out)
       var oldIsPrevCondTrue = window.isPrevCondTrue;
@@ -1632,6 +1650,7 @@ function PlayingNote(noteNum, velocity, onset) {
   },
 
   function end() {
+    this.isEnded = true;
     // try to stop any stragglers
     this.scheduledNodes.forEach(function([n, d]) {
       try {
@@ -1649,6 +1668,69 @@ function PlayingNote(noteNum, velocity, onset) {
       this.onended();
     }
   },
+
+  function drawFreqAnalysis(canvas, data) {
+    var gctx = canvas.getContext('2d');
+    var w = canvas.width;
+    var h = canvas.height;
+    // clear canvas to black
+    gctx.fillStyle = 'black';
+    gctx.fillRect(0, 0, w, h);
+    var binsPerCol = Math.max(1, Math.floor(data.length / w));
+    gctx.fillStyle = 'lime';
+    for (var x = 0, i = 0; x < w && i < data.length; x++, i += binsPerCol) {
+      var sum = 0;
+      for (var j = 0; j < binsPerCol; j++) {
+	sum += data[i+j];
+      }
+      var y = Math.floor(sum / binsPerCol);
+      gctx.fillRect(x, h - y, 1, y);
+    }
+  },
+
+  function drawTimeAnalysis(canvas, data) {
+    var gctx = canvas.getContext('2d');
+    var w = canvas.width;
+    var h = canvas.height;
+    // clear canvas to black
+    gctx.fillStyle = 'black';
+    gctx.fillRect(0, 0, w, h);
+    // trigger on positive 0-crossing (128-crossing?)
+    var pzc;
+    var prev = data[0];
+    for (pzc = 1; pzc < data.length; pzc++) {
+      if (prev < 128 && data[pzc] >= 128)
+	break;
+      prev = data[pzc];
+    }
+    // snap back to 0 if there is no such crossing
+    if (pzc == data.length)
+      pzc = 0;
+    gctx.fillStyle = 'lime';
+    for (var x = 0, i = pzc; x < w && i < data.length; x++, i++) {
+      var y = data[i];
+      var y1 = Math.floor((data[i > 0 ? i-1 : i] + y) / 2);
+      var y2 = Math.floor((data[i < data.length - 1 ? i+1 : i] + y) / 2);
+      if (y2 < y1) {
+	var tmp = y1;
+	y1 = y2;
+	y2 = tmp;
+      }
+      gctx.fillRect(x, h - 1 - y2, 1, y2 - y1 + 1);
+    }
+  },
+
+  function drawAnalysis(freqCanvas, timeCanvas, analyserNode) {
+    var freqData = new Uint8Array(analyserNode.frequencyBinCount);
+    analyserNode.getByteFrequencyData(freqData);
+    this.drawFreqAnalysis(freqCanvas, freqData);
+    var timeData = new Uint8Array(analyserNode.fftSize);
+    analyserNode.getByteTimeDomainData(timeData);
+    this.drawTimeAnalysis(timeCanvas, timeData);
+    if (!this.isEnded) {
+      requestAnimationFrame(this.drawAnalysis.bind(this, freqCanvas, timeCanvas, analyserNode));
+    }
+  }
 
 ].forEach(function(fn) { PlayingNote.prototype[fn.name] = fn; });
 
