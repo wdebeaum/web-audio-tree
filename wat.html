@@ -32,6 +32,7 @@
   <select class="add-child" onchange="addChild(this)">
    <option selected disabled>add child</option>
    <option>reference</option>
+   <option>microphone</option>
    <option>if</option>
    <option>elif</option>
    <option>else</option>
@@ -42,6 +43,8 @@
   <input class="label" placeholder="label" name="label" onchange="changeLabel(this)">
   <button class="ref" onclick="moveHere(this.parentNode)" title="move the referenced node here, and leave a reference in its place">move here</button>
   <button class="ref" onclick="copyHere(this.parentNode)" title="replace this reference with a copy of the referenced node; any labeled descendants become references in the copy">copy here</button>
+  <button class="close" onclick="deleteChild(this.parentNode)">×</button>
+ <li id="microphone-template" class="audio-node source microphone subtree leaf"><span class="node">microphone</span>
   <button class="close" onclick="deleteChild(this.parentNode)">×</button>
  <li id="audio-param-template" class="audio-param subtree expanded"><span class="node"></span>
   <input class="value" placeholder="value" name="value" onchange="changeParamValue(this)">

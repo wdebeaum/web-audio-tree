@@ -339,8 +339,8 @@ function makeChild(typeName) {
     params: {},
     children: []
   };
-  if (typeName == 'reference') {
-    newChild = cloneNewID(document.getElementById('reference-template'));
+  if (['reference', 'microphone'].includes(typeName)) {
+    newChild = cloneNewID(document.getElementById(typeName + '-template'));
   } else if (['if','elif','else'].includes(typeName)) {
     newChild = cloneNewID(document.getElementById('audio-node-template'));
     newChild.firstChild.innerHTML = typeName;
@@ -966,19 +966,37 @@ var inputStream;
 var inputSource;
 var recorderNode;
 
+function startInputSource() {
+  if (inputSource) {
+    return Promise.resolve(inputSource);
+  } else {
+    return navigator.mediaDevices.
+      getUserMedia({ audio: { channelCount: { exact: 2 } } }).
+      then((stream) => {
+	inputStream = stream;
+	inputSource = ctx.createMediaStreamSource(stream);
+	return inputSource;
+      });
+  }
+}
+
+function stopInputSource() {
+  inputStream.getTracks()[0].stop(); // stop recording audio
+  inputStream = null;
+  inputSource.disconnect();
+  inputSource = null;
+}
+
 function recordBuffer(button) {
   button.innerHTML = '■';
   button.className = 'stop';
   button.setAttribute('onclick', 'stopRecordingBuffer(this)');
   // TODO? push some of this into RecorderNode
-  navigator.mediaDevices.getUserMedia({ audio: { channelCount: { exact: 2 } } }).
-  then((stream) => {
-    inputStream = stream;
+  startInputSource().then((source) => {
     var sampleRate = inputStream.getTracks()[0].getSettings().sampleRate;
     if (!('number' == typeof sampleRate)) {
       sampleRate = ctx.sampleRate;
     }
-    inputSource = ctx.createMediaStreamSource(stream);
     recorderNode = new RecorderNode(ctx, sampleRate);
     recorderNode.connectFrom(inputSource);
     recorderNode.connect(ctx.destination);
@@ -992,10 +1010,7 @@ function stopRecordingBuffer(button) {
   button.innerHTML = '●';
   button.className = 'record';
   button.setAttribute('onclick', 'recordBuffer(this)');
-  inputStream.getTracks()[0].stop(); // stop recording audio
-  inputStream = null;
-  inputSource.disconnect();
-  inputSource = null;
+  stopInputSource();
   recorderNode.disconnect();
   recorderNode.getBuffer().then((buffer) => {
     nodeData.fields.buffer.value = buffer;
@@ -1449,6 +1464,7 @@ function loadTreeFromURL(button) {
  */
 
 function PlayingNote(noteNum, velocity, onset) {
+  //console.log('playing note ' + noteNum);
   if (velocity === undefined) {
     velocity = 1;
   }
@@ -1464,13 +1480,17 @@ function PlayingNote(noteNum, velocity, onset) {
   this.scheduledNodes = []; // [audioNode, nodeData] pairs
   this.referenceTasks = []; // functions to be called to connect references
   this.releaseTasks = []; // functions to be called when we know release time
-  this.topNodes =
-    tree.destination.children.map(this.instantiateNode.bind(this));
-  this.topNodes.forEach(function(n) {
-    n.connect(ctx.destination);
+  this.isEnded = false;
+  this.topNodes = [];
+  tree.destination.children.forEach((c) => {
+    this.instantiateNode(c).then((n) => {
+      if (!this.isEnded) {
+	this.topNodes.push(n);
+	n.connect(ctx.destination);
+      }
+    });
   });
   this.referenceTasks.forEach(function(fn) { fn(); });
-  this.isEnded = false;
   this.start();
 }
 
@@ -1479,7 +1499,7 @@ function PlayingNote(noteNum, velocity, onset) {
   function instantiateNode(nodeData) {
     if (nodeData.type == 'reference') {
       var that = this;
-      return {
+      return Promise.resolve({
 	connect: function(toNode) {
 	  that.referenceTasks.push(function() {
 	    that.audioNodes[nodeData.label].connect(toNode);
@@ -1488,7 +1508,23 @@ function PlayingNote(noteNum, velocity, onset) {
 	disconnect: function() {
 	  that.audioNodes[nodeData.label].disconnect();
 	}
-      };
+      });
+    } else if (nodeData.type == 'microphone') {
+      // FIXME this breaks for polyphony
+      if (inputSource) {
+	return Promise.resolve(inputSource);
+      } else {
+	return startInputSource().
+	  then((s) => {
+	    // FIXME this conflates release and end; if the note continues after release, this will still stop the mic at release
+	    if (this.isEnded) { // stopped before we got a chance to start
+	      stopInputSource();
+	    } else {
+	      this.releaseTasks.push(stopInputSource);
+	    }
+	    return s;
+	  });
+      }
     } else if (['if', 'elif', 'else'].includes(nodeData.type)) { // conditional
       // make a GainNode to represent this conditional node
       var audioNode = ctx.createGain();
@@ -1513,12 +1549,12 @@ function PlayingNote(noteNum, velocity, onset) {
 	var oldIsPrevCondTrue = window.isPrevCondTrue;
 	window.isPrevCondTrue = false; // no previous conds among children
 	nodeData.children.forEach(function(c) {
-	  this.instantiateNode(c).connect(audioNode);
+	  this.instantiateNode(c).then((n) => { n.connect(audioNode); });
 	}, this);
 	// restore old isPrevCondTrue
 	window.isPrevCondTrue = oldIsPrevCondTrue;
       }
-      return audioNode;
+      return Promise.resolve(audioNode);
     } else { // ordinary AudioNode
       var typeData = nodeTypes[nodeData.type]
       var audioNode = ctx[typeData.create]();
@@ -1552,11 +1588,11 @@ function PlayingNote(noteNum, velocity, onset) {
       }
       window.isPrevCondTrue = false; // no previous conds among children
       nodeData.children.forEach(function(c) {
-	this.instantiateNode(c).connect(audioNode);
+	this.instantiateNode(c).then((n) => { n.connect(audioNode); });
       }, this);
       // restore old isPrevCondTrue
       window.isPrevCondTrue = oldIsPrevCondTrue;
-      return audioNode;
+      return Promise.resolve(audioNode);
     }
   },
 
@@ -1597,7 +1633,7 @@ function PlayingNote(noteNum, velocity, onset) {
     }, this);
     window.isPrevCondTrue = false;
     paramData.children.forEach(function(c) {
-      this.instantiateNode(c).connect(audioParam);
+      this.instantiateNode(c).then((n) => { n.connect(audioParam); });
     }, this);
   },
 
@@ -1645,11 +1681,18 @@ function PlayingNote(noteNum, velocity, onset) {
   },
 
   function release(releaseTime) {
+    //console.log('releasing note ' + this.vars.n);
     this.vars.r = releaseTime;
     this.releaseTasks.forEach(function(fn) { fn(); });
+    if (this.scheduledNodes.length == 0 && !this.isEnded) {
+      // we have no scheduled nodes to call end() from their onended events,
+      // and end() hasn't been called yet, so we must call end() ourselves
+      this.end();
+    }
   },
 
   function end() {
+    //console.log('ending note ' + this.vars.n);
     this.isEnded = true;
     // try to stop any stragglers
     this.scheduledNodes.forEach(function([n, d]) {
@@ -1778,6 +1821,7 @@ document.body.onkeydown = function(evt) {
     var code = standardKeyCode(evt);
     var td = document.getElementById("key_" + code);
     if (td) {
+      //console.log('keydown ' + code);
       if (!kc2osc[code]) {
 	var noteNum = td.className.slice(0,2);
 	if (/\d\d/.test(noteNum)) {
@@ -1794,6 +1838,7 @@ document.body.onkeyup = function(evt) {
   var code = standardKeyCode(evt);
   var td = document.getElementById("key_" + code);
   if (td) {
+    //console.log('keyup ' + code);
     var oscillator = kc2osc[code];
     if (oscillator) {
       oscillator.release(ctx.currentTime);

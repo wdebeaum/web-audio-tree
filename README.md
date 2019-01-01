@@ -78,13 +78,19 @@ To actually play the instrument you have created by building the tree, you can p
 
 #### Reference nodes ####
 
-Anywhere you can add an `AudioNode` child, you can also add a reference to another `AudioNode` already in the tree. Make sure the node you plan to refer to (the "referent") has a label by entering one in the text box to the right of the node type. Then add a "reference" child somewhere else, and enter the same label in its text box. The referent's output will be connected to both parents' inputs.
+Anywhere you can add an `AudioNode` child, you can also add a reference to another `AudioNode` already in the tree. Make sure the node you plan to refer to (the "referent") has a label by entering one in the text box to the right of the node type. Then add a `reference` child somewhere else, and enter the same label in its text box. The referent's output will be connected to both parents' inputs.
 
-You can also use references to move nodes. Just make a reference as above, and then click on its "move here" button. The reference and its referent will switch places. Then you can remove the reference, leaving the referent in its new location in the tree.
+You can also use references to move nodes. Just make a reference as above, and then click on its `move here` button. The reference and its referent will switch places. Then you can remove the reference, leaving the referent in its new location in the tree.
 
-And you can use references to copy nodes. Clicking the "copy here" button replaces the reference with a deep copy of the referent. Any labeled descendants will be turned into references to the originals instead of copies.
+And you can use references to copy nodes. Clicking the `copy here` button replaces the reference with a deep copy of the referent. Any labeled descendants will be turned into references to the originals instead of copies.
 
 Note that while you can make cycles in the graph using references, the Web Audio API specification says that you must insert a non-zero `DelayNode` in any such cycle. Web Audio Tree does not check for this, but if you break this rule, you might break the program.
+
+#### Microphone node ####
+
+A `microphone` child takes input from the microphone, using a combination of a `MediaStreamSourceNode` and an audio stream obtained from `navigator.mediaDevices.getUserMedia()`. The microphone is opened when a key is pressed, and closed when it is released (it doesn't wait for the rest of the note to finish playing). <span class="TODO">In the future, it might support scheduling `start()`/`stop()` times.</span>
+
+The microphone only works properly when playing one note at a time. Simultaneous notes can share the input, but the first note "owns" the microphone and will close it when it is released, regardless of whether other notes are using it. <span class="TODO">This may be fixed in the future so that the microphone remains open as long as it is in use.</span>
 
 #### Conditional nodes ####
 
@@ -288,7 +294,6 @@ Some of these features may be implemented in the future:
 
  - handle MIDI controller messages, in particular the sustain pedal
  - variable for MIDI program number (along with selector for non-MIDI input)
- - live mic input node type
  - import instruments from:
    - Adlib data (Rdos `.raw` / DosBox `.dro` / Video Game Music `.vgm` / `.vgz`)
    - FastTracker II (`.xm` / `.xi`)
