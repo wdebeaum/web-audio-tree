@@ -312,6 +312,7 @@ document.getElementById('start').onclick = function(evt) {
   evt.currentTarget.remove();
   initWebAudio();
   initWebMIDI();
+  initTouchboard();
 }
 
 /*
@@ -1782,6 +1783,19 @@ function PlayingNote(noteNum, velocity, onset) {
  * (largely borrowed from music-cad)
  */
 
+const keyboard = document.getElementById('keyboard');
+const touchboard = document.getElementById('touchboard');
+
+document.getElementById('board-select').onchange = function(evt) {
+  if (evt.currentTarget.value == 'keyboard') {
+    keyboard.style.display = null;
+    touchboard.style.display = 'none';
+  } else { // touchboard
+    keyboard.style.display = 'none';
+    touchboard.style.display = null;
+  }
+}
+
 function isAsciiKeyCode(code) {
   return ((code >= 48 && code <= 59) || (code >= 65 && code <= 90));
 }
@@ -1854,7 +1868,7 @@ document.body.onkeyup = function(evt) {
 var mouseOscillator;
 var mouseButtonIsDown;
 
-document.getElementById('keyboard').onmousedown = function(evt) {
+keyboard.onmousedown = function(evt) {
   mouseButtonIsDown = true;
   var td = evt.target;
   if (td.matches('.b, .w')) {
@@ -1869,7 +1883,7 @@ document.getElementById('keyboard').onmousedown = function(evt) {
   evt.preventDefault();
 };
 
-document.getElementById('keyboard').onmouseup = function(evt) {
+keyboard.onmouseup = function(evt) {
   mouseButtonIsDown = false;
   mouseOscillator.release(ctx.currentTime);
   mouseOscillator = null;
@@ -1902,3 +1916,100 @@ forEach(function(td) {
     evt.preventDefault();
   };
 });
+
+// activated by touching the touchboard
+
+function initTouchboard() {
+  var octaveTemplate = document.getElementById('octave-template');
+  var labelTemplate = octaveTemplate.children[0];
+  for (var oct = 0; oct < 10; oct++) {
+    var label = labelTemplate.cloneNode();
+    label.setAttribute('x', oct * 70);
+    label.appendChild(document.createTextNode('C' + oct));
+    touchboard.appendChild(label);
+    for (var k = 1; k <= 12; k++) {
+      var keyTemplate = octaveTemplate.children[k];
+      var key = keyTemplate.cloneNode();
+      var oldNoteNum = key.classList.item(0);
+      var newNoteNum = parseInt(oldNoteNum) + oct * 12;
+      key.classList.replace(oldNoteNum, newNoteNum);
+      key.setAttribute('x', oct * 70 + parseFloat(key.getAttribute('x')));
+      touchboard.appendChild(key);
+    }
+  }
+}
+
+var touch2touched = {}; // map touch identifier to touched element
+var touchNote2osc = {}; // map MIDI note number to playing note started by touch
+
+touchboard.ontouchstart = function(evt) {
+  evt.preventDefault();
+  var touches = evt.changedTouches;
+  for (var i = 0; i < touches.length; i++) {
+    var touch = touches[i];
+    var touched = document.elementFromPoint(touch.clientX, touch.clientY);
+    touch2touched[touch.identifier] = touched;
+    if (touched.matches('.b, .w') && !touched.matches('.keydown')) {
+      var noteNum = touched.classList.item(0);
+      touchNote2osc[noteNum] = new PlayingNote(noteNum);
+      touchNote2osc[noteNum].onended =
+        function() {
+	  touched.classList.remove('keydown');
+	};
+      setTimeout(function() { touched.classList.add('keydown'); }, 0);
+    }
+  }
+};
+
+touchboard.ontouchmove = function(evt) {
+  evt.preventDefault();
+  var touches = evt.changedTouches;
+  for (var i = 0; i < touches.length; i++) {
+    var touch = touches[i];
+    var oldTouched = touch2touched[touch.identifier];
+    var newTouched = document.elementFromPoint(touch.clientX, touch.clientY);
+    // TODO pan/zoom if two touches on non-key area
+    if (newTouched == oldTouched) continue; // no real change
+    touch2touched[touch.identifier] = newTouched;
+    // stop old touched note if any
+    // TODO? check if any other touches are still holding it down
+    if (oldTouched !== undefined) {
+      var oldNoteNum = oldTouched.classList.item(0);
+      var oldOsc = touchNote2osc[oldNoteNum];
+      if (oldOsc !== undefined) {
+	oldOsc.release(ctx.currentTime);
+	delete touchNote2osc[oldNoteNum];
+      }
+    }
+    // start new touched note
+    if (newTouched.matches('.b, .w') && !newTouched.matches('.keydown')) {
+      newNoteNum = newTouched.classList.item(0);
+      var newOsc = new PlayingNote(newNoteNum);
+      touchNote2osc[newNoteNum] = newOsc;
+      newOsc.onended =
+	function() {
+	  newTouched.classList.remove('keydown');
+	};
+      setTimeout(function() { newTouched.classList.add('keydown'); }, 0);
+    }
+  }
+};
+
+touchboard.ontouchend = function(evt) {
+  evt.preventDefault();
+  var touches = evt.changedTouches;
+  for (var i = 0; i < touches.length; i++) {
+    var touch = touches[i];
+    var touched = touch2touched[touch.identifier];
+    // TODO? check if any other touches are still holding it down
+    if (touched !== undefined) {
+      var noteNum = touched.classList.item(0);
+      if (noteNum in touchNote2osc) {
+	touchNote2osc[noteNum].release(ctx.currentTime);
+	delete touchNote2osc[noteNum];
+      }
+    }
+  }
+};
+
+touchboard.ontouchcancel = touchboard.ontouchend;

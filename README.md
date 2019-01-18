@@ -70,10 +70,11 @@ You can also use conditionals `if(condition)`, `elif(condition)`, and `else` (in
 
 #### Playing the instrument ####
 
-To actually play the instrument you have created by building the tree, you can press, hold, and release keys using one of three methods:
+To actually play the instrument you have created by building the tree, you can press, hold, and release keys using one of four methods:
 
  - Press the corresponding keys on your computer's keyboard. Use the diagram below the tree to show you which keys to press. This gives you a little over two octaves, with the q key being middle C. Note that the two rows overlap: ,-/ and q-e are the same notes. Also note that, while you can get polyphony by holding multiple keys, many computer keyboards are unable to detect certain combinations of keypresses, so one or more of the notes in a given chord may not sound.
  - Click on the key diagram with your mouse or other pointing device. You can't get polyphony this way, but you can drag the mouse across the keys to change which note is being played.
+ - Switch from the keyboard to the touchboard using the menu above the key diagram. The touchboard is better suited to touchscreens, and supports multitouch/polyphony.
  - Connect a MIDI keyboard (or other MIDI controller) to your computer and press its keys. This will only work if there is a green checkmark next to "Web MIDI API" in the top right corner, and your device is connected to the first MIDI input port your computer has (however it defines "first"). Only note on/off messages are supported, so e.g. a sustain pedal isn't going to work. <span class="TODO">Making sustain pedals work is a planned feature.</span>
 
 #### Reference nodes ####
@@ -292,6 +293,7 @@ More types of `AudioNode` are available; see the [Web Audio API spec](https://we
 
 Some of these features may be implemented in the future:
 
+ - use multitouch gestures to pan/zoom the touchboard by its handle along the top
  - handle MIDI controller messages, in particular the sustain pedal
  - variable for MIDI program number (along with selector for non-MIDI input)
  - import instruments from:

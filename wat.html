@@ -131,6 +131,11 @@
 </datalist>
 </div>
 
+<select id="board-select">
+ <option selected>keyboard</option>
+ <option>touchboard</option>
+</select>
+
 <table id="keyboard" cellspacing="0">
 <tr>
  <td colspan="2">`</td>
@@ -203,6 +208,32 @@
  <td colspan="3">ctrl</td>
 </tr>
 </table>
+
+<svg id="touchboard" viewBox="280 0 170 60" preserveAspectRatio="none" style="display: none">
+ <defs>
+  <linearGradient id="blk">
+   <stop offset="0%" stop-color="#555" />
+   <stop offset="30%" stop-color="#181818" />
+   <stop offset="70%" stop-color="#080808" />
+   <stop offset="100%" stop-color="#000" />
+  </linearGradient>
+  <g id="octave-template">
+   <text y="7" font-size="5"></text>
+   <rect  class="0 w"  x="0" y="10" width="10" height="50" />
+   <rect  class="2 w" x="10" y="10" width="10" height="50" />
+   <rect  class="4 w" x="20" y="10" width="10" height="50" />
+   <rect  class="5 w" x="30" y="10" width="10" height="50" />
+   <rect  class="7 w" x="40" y="10" width="10" height="50" />
+   <rect  class="9 w" x="50" y="10" width="10" height="50" />
+   <rect class="11 w" x="60" y="10" width="10" height="50" />
+   <rect  class="1 b"  x="6" y="10"  width="6" height="30" />
+   <rect  class="3 b" x="18" y="10"  width="6" height="30" />
+   <rect  class="6 b" x="36" y="10"  width="6" height="30" />
+   <rect  class="8 b" x="47" y="10"  width="6" height="30" />
+   <rect class="10 b" x="58" y="10"  width="6" height="30" />
+  </g>
+ </defs>
+</svg>
 
 <a id="file-output" class="invisible"></a>
 

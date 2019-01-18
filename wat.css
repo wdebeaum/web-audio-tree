@@ -225,6 +225,21 @@ table#keyboard td[colspan="4"] { width: 4em; }
 table#keyboard td[colspan="5"] { width: 4.75em; }
 table#keyboard td[colspan="14"] { width: 10.5em; }
 
+svg#touchboard {
+  width: 100%;
+  height: 4in;
+}
+
+svg#touchboard rect {
+  stroke: black;
+  stroke-width: 0.5px;
+}
+
+svg#touchboard rect.w { fill: #ffd; }
+/*svg#touchboard rect.b { fill: #111; }*/
+svg#touchboard rect.b { fill: url(#blk); }
+svg#touchboard rect.keydown { fill: #0f0; }
+
 ul.nav {
   position: absolute;
   top: 0;
