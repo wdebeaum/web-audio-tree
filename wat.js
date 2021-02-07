@@ -1483,6 +1483,8 @@ function PlayingNote(noteNum, velocity, onset) {
   this.releaseTasks = []; // functions to be called when we know release time
   this.isEnded = false;
   this.topNodes = [];
+  // instantiate and connect each child of the destination node (their children
+  // in turn might get instantiated in promises)
   tree.destination.children.forEach((c) => {
     this.instantiateNode(c).then((n) => {
       if (!this.isEnded) {
@@ -1491,8 +1493,12 @@ function PlayingNote(noteNum, velocity, onset) {
       }
     });
   });
-  this.referenceTasks.forEach(function(fn) { fn(); });
-  this.start();
+  // wait for everything to be instantiated before connecting references and
+  // starting sources
+  setTimeout(() => {
+    this.referenceTasks.forEach(function(fn) { fn(); });
+    this.start();
+  }, 0);
 }
 
 [ // begin PlayingNote methods
