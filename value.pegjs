@@ -84,6 +84,7 @@ function_call
   / name:function_name '(' first:value rest:(',' v:value {return v;})* ')' sp {
       return name + '(' + [first, ...rest].join(',') + ')';
     }
+  / name:function_name '(' sp ')' sp { return name + '()'; }
   / '√' sp arg:atom { return 'Math.sqrt(' + arg + ')'; }
 
 function_name
