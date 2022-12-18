@@ -14,7 +14,7 @@ Web Audio Tree requires a web browser that implements the [Web Audio API](https:
 
 Some browsers on some platforms have a large amount of audio latency. For example, as of this writing, Chrome on Linux has approximately 150ms of latency between striking a key (on the computer keyboard or a MIDI controller) and hearing the corresponding sound. Personally, I find this too distracting to actually play music well. Firefox does not have this large latency.
 
-Although not required, Web Audio Tree can also make use of the [Web MIDI API](http://webaudio.github.io/web-midi-api/) to receive note on/off messages from a MIDI controller. But not all browsers that support the Web Audio API also support MIDI. In particular, Firefox does not yet support it (they seem to be [a bit hung up](https://github.com/mozilla/standards-positions/issues/58) on the security implications of SysEx messages, nevermind that I don't use those...). Chrome does support MIDI (it only allows SysEx in secure contexts (HTTPS), with a user prompt). See below for a workaround for Firefox on Linux, though.
+Although not required, Web Audio Tree can also make use of the [Web MIDI API](http://webaudio.github.io/web-midi-api/) to receive note on/off messages from a MIDI controller. But not all browsers that support the Web Audio API also support MIDI. In particular, Firefox only just recently (2022) started supporting it, in version 108. They had been [a bit hung up](https://github.com/mozilla/standards-positions/issues/58) on the security implications of SysEx messages (nevermind that I don't use those, or output any MIDI messages at all...) and even now, enabling MIDI support involves dismissing three nastygrams for each site (1. "Hey, this site might be trying to attack you! Do you want to let it? [no details]" 2. "Don't say I didn't warn you, MIDI is dAnGeRoUs!" 3. "Just in case you eventually come to your senses, you can disable this again over here." SMDH.). Chrome does support MIDI, but (as of 2022/version 108) on my computer it only sees a MIDI "through" port and not the input port. Firefox requires a secure context to use MIDI at all (Chrome requires it for SysEx), so to use MIDI you'll need to serve Web Audio Tree from an HTTPS webserver with a certificate set up (you can use a self-signed certificate, but then you'll get another nastygram before you can even get to the site).
 
 And Web Audio Tree can make use of the [Media Capture and Streams API](https://www.w3.org/TR/mediacapture-streams/) for microphone input to record into an `AudioBuffer`. Again, this is not required. You can also load an audio file into an `AudioBuffer` from your computer or from the web.
 
@@ -38,7 +38,7 @@ For more information on the API, including a complete list of the different type
 
 ### Web Audio Tree ###
 
-To start using Web Audio Tree, click the green "start" button. This will attempt to create an `AudioContext`, and then attempt to connect to your computer's first MIDI input port. The results of these attempts are visible in the API status area in the top right; a green checkmark means success, a red X means your browser doesn't support the relevant API, and a yellow question mark means either the attempt wasn't made for some reason, or you do have the API but it didn't work (this can happen if you don't have a MIDI input port). Only the green checkmark next to "Web Audio API" is required.
+To start using Web Audio Tree, click the green "start" button. This will attempt to create an `AudioContext`, and then attempt to connect to your computer's first MIDI input port (non-"through" if possible). This may cause your browser to prompt you for permission to do these things. The results of these attempts are visible in the API status area in the top right; a green checkmark means success, a red X means your browser doesn't support the relevant API, and a yellow question mark means either the attempt wasn't made for some reason, or you do have the API but it didn't work (this can happen if you don't have a MIDI input port). Only the green checkmark next to "Web Audio API" is required.
 
 #### Building the tree ####
 
@@ -75,7 +75,7 @@ To actually play the instrument you have created by building the tree, you can p
  - Press the corresponding keys on your computer's keyboard. Use the diagram below the tree to show you which keys to press. This gives you a little over two octaves, with the q key being middle C. Note that the two rows overlap: ,-/ and q-e are the same notes. Also note that, while you can get polyphony by holding multiple keys, many computer keyboards are unable to detect certain combinations of keypresses, so one or more of the notes in a given chord may not sound.
  - Click on the key diagram with your mouse or other pointing device. You can't get polyphony this way, but you can drag the mouse across the keys to change which note is being played.
  - Switch from the keyboard to the touchboard using the menu above the key diagram. The touchboard is better suited to touchscreens, and supports multitouch/polyphony.
- - Connect a MIDI keyboard (or other MIDI controller) to your computer and press its keys. This will only work if there is a green checkmark next to "Web MIDI API" in the top right corner, and your device is connected to the first MIDI input port your computer has (however it defines "first"). Only note on/off messages are supported, so e.g. a sustain pedal isn't going to work. <span class="TODO">Making sustain pedals work is a planned feature.</span>
+ - Connect a MIDI keyboard (or other MIDI controller) to your computer and press its keys. This will only work if there is a green checkmark next to "Web MIDI API" in the top right corner, and your device is connected to the port shown in the box labeled "MIDI input port" (you can use this box to select a different port if necessary). Only note on/off messages are supported, so e.g. a sustain pedal isn't going to work. <span class="TODO">Making sustain pedals work is a planned feature.</span>
 
 #### Reference nodes ####
 
@@ -305,7 +305,7 @@ Some of these features may be implemented in the future:
 
 ## Linux Firefox MIDI workaround ##
 
-I have kind of a hacky workaround for adding just enough MIDI support to Firefox on Linux to get MIDI keyboard input working. It may also work for other browsers, but only on Linux. Follow these steps:
+I have kind of a hacky workaround for adding just enough MIDI support to Firefox versions 107 and below on Linux to get MIDI keyboard input working. It may also work for other browsers, but only on Linux. Follow these steps:
 
  - Once:
    - Install [lighttpd](https://www.lighttpd.net/).

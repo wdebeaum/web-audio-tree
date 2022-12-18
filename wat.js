@@ -260,6 +260,43 @@ function initWebAudio() {
 
 var note2osc = {};
 
+function handleMIDIMessage(evt) {
+  try {
+    //console.log(evt.data);
+    if (evt.data.length == 3) {
+      var cmd = evt.data[0] >> 4;
+      var noteNum = evt.data[1];
+      var velocity = evt.data[2] / 127; // divide so velocity is in [0,1]
+      if (cmd == 8 || // note off
+	  (cmd == 9 && velocity == 0)) { // note on with vel 0 (i.e. off)
+	//console.log({ note: 'off', num: noteNum });
+	if (note2osc[noteNum]) {
+	  note2osc[noteNum].release(ctx.currentTime);
+	}
+      } else if (cmd == 9) { // note on
+	//console.log({ note: 'on', num: noteNum, vel: velocity });
+	if (note2osc[noteNum]) {
+	  note2osc[noteNum].end();
+	}
+	note2osc[noteNum] = new PlayingNote(noteNum, velocity);
+      }
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+var midiInputs = undefined;
+var selectedMIDIInput = undefined;
+
+function changeMIDIInput(evt) {
+  if (selectedMIDIInput)
+    selectedMIDIInput.removeEventListener('midimessage', handleMIDIMessage);
+  selectedMIDIInput = midiInputs.get(evt.target.value);
+  if (selectedMIDIInput)
+    selectedMIDIInput.addEventListener('midimessage', handleMIDIMessage);
+}
+
 function initWebMIDI() {
   if ('function' != typeof navigator.requestMIDIAccess) {
     console.log('Web MIDI API not supported in this browser.');
@@ -268,42 +305,30 @@ function initWebMIDI() {
   }
   navigator.requestMIDIAccess({ sysex: false, software: false }).
   then(function(midiAccess) {
-    // get the first MIDI input port
-    var inputPort;
-    midiAccess.inputs.forEach(function(port, key) {
-      if (!inputPort) {
-	inputPort = port;
-      }
+    // get the MIDI input ports and use them to populate the select
+    var midiInputSelect = document.getElementById('midi-input');
+    var firstInput = undefined;
+    var firstNonThroughInput = undefined;
+    midiInputs = midiAccess.inputs;
+    midiInputs.forEach(function(inputPort, key) {
+      var option = document.createElement('option');
+      option.value = key;
+      option.innerText = inputPort.name;
+      midiInputSelect.appendChild(option);
+      if (!firstInput)
+	firstInput = inputPort;
+      if (!firstNonThroughInput && !/through/i.test(inputPort.name))
+	firstNonThroughInput = inputPort;
     });
-    if (!inputPort) {
+    // try to pick the first suitable input port
+    selectedMIDIInput = firstNonThroughInput || firstInput;
+    if (!selectedMIDIInput) {
       console.log('no MIDI input ports found.');
       return;
     }
-    inputPort.onmidimessage = function(evt) {
-      try {
-	//console.log(evt.data);
-	if (evt.data.length == 3) {
-	  var cmd = evt.data[0] >> 4;
-	  var noteNum = evt.data[1];
-	  var velocity = evt.data[2] / 127; // divide so velocity is in [0,1]
-	  if (cmd == 8 || // note off
-	      (cmd == 9 && velocity == 0)) { // note on with vel 0 (i.e. off)
-	    //console.log({ note: 'off', num: noteNum });
-	    if (note2osc[noteNum]) {
-	      note2osc[noteNum].release(ctx.currentTime);
-	    }
-	  } else if (cmd == 9) { // note on
-	    //console.log({ note: 'on', num: noteNum, vel: velocity });
-	    if (note2osc[noteNum]) {
-	      note2osc[noteNum].end();
-	    }
-	    note2osc[noteNum] = new PlayingNote(noteNum, velocity);
-	  }
-	}
-      } catch (e) {
-	console.error(e);
-      }
-    };
+    midiInputSelect.value = selectedMIDIInput.id;
+    selectedMIDIInput.addEventListener('midimessage', handleMIDIMessage);
+    document.getElementById('midi-controls').style.display = '';
     document.getElementById('web-midi-status').classList.replace('unknown', 'supported');
   });
 }
