@@ -1,10 +1,13 @@
 // web-midi-shim.js - implement the minimum of the Web MIDI API necessary to
 // get wat working
 
-// enter this in the web console to apply the shim:
-// const wms = document.createElement('script'); wms.src='web-midi-shim.js'; document.body.appendChild(wms);
+/* enter this in the web console to apply the shim:
+const wms = document.createElement('script');
+wms.src='web-midi-shim.js';
+document.body.appendChild(wms);
+*/
 
-function MIDIPort() {
+function MIDIPort() { // eslint-disable-line no-redeclare
   this.socket = new WebSocket('ws://localhost:22468', 'midi');
   const that = this;
   this.socket.addEventListener('message', function(evt) {
@@ -21,4 +24,4 @@ navigator.requestMIDIAccess = function(opts) {
       cb({ inputs: [port] });
     }
   };
-}
+};

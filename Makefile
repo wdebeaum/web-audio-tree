@@ -32,6 +32,9 @@ midi-workaround: node_modules/websocket/package.json simple-tree/simple-tree.js
 	echo "var wms = document.createElement('script'); wms.src='web-midi-shim.js'; document.body.appendChild(wms);" \
 	) & ./lighttpd.sh & node midi-server.js 
 
+lint: node_modules/eslint/package.json
+	./node_modules/eslint/bin/eslint.js ./
+
 node_modules/%/package.json:
 	npm install $*
 

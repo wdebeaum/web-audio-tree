@@ -1,0 +1,44 @@
+{
+  "extends": "eslint:recommended",
+  "env": {
+    "browser": true,
+    "es6": true
+  },
+  "rules": {
+    "indent": "off",
+    "no-mixed-spaces-and-tabs": "off",
+    "max-len": [
+      "error",
+      {
+	"tabWidth": 8,
+	"ignoreStrings": true,
+	"ignoreTemplateLiterals": true,
+	"ignorePattern": "TODO|FIXME"
+      }
+    ],
+    "no-var": "error",
+    "no-unused-vars": ["error", { "vars": "local", "args": "none" }],
+    "linebreak-style": ["error", "unix"],
+    "semi": ["error", "always"],
+    "func-call-spacing": "error",
+    "space-before-function-paren": [
+      "error",
+      {
+	"anonymous": "never",
+	"named": "never",
+	"asyncArrow": "always"
+      }
+    ],
+    "keyword-spacing": [
+      "error",
+      { "before": true, "after": true }
+    ]
+  },
+  "globals": {
+    "initTrees": "readonly",
+    "updateSubtree": "readonly",
+    "ValueParser": "readonly",
+    "base64js": "readonly",
+    "RecorderNode": "readonly"
+  }
+}

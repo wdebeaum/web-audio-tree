@@ -1,9 +1,12 @@
-// midi-server.js - read a midi device file and send each 3-byte note on/off message over a websocket
+// midi-server.js - read a midi device file and send each 3-byte note on/off
+// message over a websocket
 
 // install:
 // npm install websocket
 // run:
 // node midi-server.js
+
+/* eslint-env node */
 
 const fs = require('fs');
 const http = require('http');

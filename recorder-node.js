@@ -4,10 +4,10 @@ if ('AudioWorkletNode' in window) {
     constructor(context, sampleRate) {
       super(context, 'recorder-processor' /*, { numberOfOutputs: 0 }*/);
       this.port.onmessage = (evt) => {
-	const buffer = this.context.createBuffer(1, evt.data.length, sampleRate);
+	const buffer = this.context.createBuffer(1,evt.data.length,sampleRate);
 	buffer.copyToChannel(evt.data, 0);
 	this.resolve(buffer);
-      }
+      };
     }
 
     connectFrom(from) {
@@ -24,7 +24,7 @@ if ('AudioWorkletNode' in window) {
 
   RecorderNode.addModule = (ctx) => {
     return ctx.audioWorklet.addModule('recorder-processor.js');
-  }
+  };
 
   window.RecorderNode = RecorderNode;
 
@@ -38,7 +38,8 @@ if ('AudioWorkletNode' in window) {
       this.samples = new Float32Array(1024);
       this.numSamples = 0;
       this.quantum = 256;
-      this.scriptProcessor = this.context.createScriptProcessor(this.quantum, 1, 0);
+      this.scriptProcessor =
+	this.context.createScriptProcessor(this.quantum, 1, 0);
       this.scriptProcessor.onaudioprocess = this.onaudioprocess.bind(this);
     }
 
@@ -80,7 +81,7 @@ if ('AudioWorkletNode' in window) {
   RecorderNode.addModule = (ctx) => {
     // do nothing, just resolve immediately
     return new Promise((resolve, reject) => { resolve(); });
-  }
+  };
 
   window.RecorderNode = RecorderNode;
 

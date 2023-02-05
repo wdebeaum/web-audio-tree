@@ -1,3 +1,5 @@
+'use strict';
+
 /*
  * Initialization
  */
@@ -6,7 +8,8 @@
 Object.getOwnPropertyNames(window).forEach((k) => {
   if (/^webkit/.test(k)) {
     const noPrefix = k.substring(6);
-    const noPrefixLower = noPrefix.substring(0,1).toLowerCase() + noPrefix.substring(1);
+    const noPrefixLower =
+      noPrefix.substring(0,1).toLowerCase() + noPrefix.substring(1);
     if (!(noPrefix in window) && !(noPrefixLower in window)) {
       window[noPrefix] = window[k];
       window[noPrefixLower] = window[k];
@@ -87,11 +90,11 @@ function initWebAudio() {
 	// starts with 'create'. guess it will create a type of node!
 	let typeName = k.replace(/^create/,'') + 'Node';
 	// if not, try prepending 'Audio'
-	if (!AudioNode.isPrototypeOf(window[typeName])) {
+	if (!Object.prototype.isPrototypeOf.call(AudioNode, window[typeName])) {
 	  typeName = 'Audio' + typeName;
 	}
 	// if we have the name of an AudioNode subtype
-	if (AudioNode.isPrototypeOf(window[typeName])) {
+	if (Object.prototype.isPrototypeOf.call(AudioNode, window[typeName])) {
 	  // try making an example instance
 	  const example = ctx[k]();
 	  // if it's not an instance, skip it
@@ -135,7 +138,7 @@ function initWebAudio() {
 		    (paramCreate in BaseAudioContext.prototype) &&
 		    ('function' ==
 		       typeof BaseAudioContext.prototype[paramCreate])) {
-		  const numArgs = BaseAudioContext.prototype[paramCreate].length;
+		  const numArgs=BaseAudioContext.prototype[paramCreate].length;
 		  const args = new Array(numArgs).fill('?').join(', ');
 		  console.log(typeName + '#' + param + '(' + paramCreate + '(' + args + '))');
 		  nodeTypes[typeName].fields[paramTypeName] = {
@@ -227,7 +230,7 @@ function initWebAudio() {
 
   // add a clone of the add-child template to the destination li, as well as a
   // place for the children to be created
-  const dest = document.getElementById('destination')
+  const dest = document.getElementById('destination');
   dest.appendChild(cloneNoID(addChildTemplate));
   dest.appendChild(document.getElementById('save-load-controls'));
   let ul = document.createElement('ul');
@@ -236,7 +239,7 @@ function initWebAudio() {
   dest.classList.replace('leaf', 'expanded');
 
   // also add them to the audio param template
-  const apt = document.getElementById('audio-param-template')
+  const apt = document.getElementById('audio-param-template');
   apt.appendChild(cloneNoID(addChildTemplate));
   ul = document.createElement('ul');
   ul.className = 'children';
@@ -289,6 +292,7 @@ function handleMIDIMessage(evt) {
 let midiInputs = undefined;
 let selectedMIDIInput = undefined;
 
+/* exported changeMIDIInput */
 function changeMIDIInput(evt) {
   if (selectedMIDIInput)
     selectedMIDIInput.removeEventListener('midimessage', handleMIDIMessage);
@@ -338,16 +342,17 @@ document.getElementById('start').onclick = function(evt) {
   initWebAudio();
   initWebMIDI();
   initTouchboard();
-}
+};
 
 /*
  * Tree UI
  */
 
+/* exported addChild */
 function addChild(select) {
   const typeName = select.value;
   select.value = 'add child';
-  const parentSubtree = select.parentNode
+  const parentSubtree = select.parentNode;
   const children = parentSubtree.querySelector('.children');
   const data = makeChild(typeName);
   tree[data.subtree.id] = data;
@@ -375,7 +380,7 @@ function makeChild(typeName) {
       input.parentNode.removeChild(input);
     } else {
       data.value = 'false';
-      data.valueFn = function() { return false; }
+      data.valueFn = function() { return false; };
       input.value = data.value;
       input.className = 'value';
       input.placeholder = 'condition';
@@ -605,6 +610,7 @@ function deleteSubtree(nodeData) {
   }
 }
 
+/* exported deleteChild */
 function deleteChild(childSubtree) {
   let removeFromList;
   if (childSubtree.matches('.audio-node')) {
@@ -629,6 +635,7 @@ function deleteChild(childSubtree) {
   childSubtree.remove();
 }
 
+/* exported addAutomation */
 function addAutomation(select) {
   const fnName = select.value;
   select.value = 'add automation';
@@ -646,6 +653,7 @@ function addAutomation(select) {
   tree[select.parentNode.id].automation.push(childData);
 }
 
+/* exported moveAutomation */
 function moveAutomation(button) {
   const li = button.parentNode;
   const dir = button.innerText;
@@ -695,7 +703,7 @@ function updatePeriodicWave(table) {
       select.disabled = false;
     }
     // unset the PeriodicWave
-    data.fields.PeriodicWave.valueFn = function() { return this.value; }
+    data.fields.PeriodicWave.valueFn = function() { return this.value; };
     data.fields.PeriodicWave.value = null;
   } else { // some PeriodicWave
     // make the PeriodicWave valueFn
@@ -708,6 +716,7 @@ function updatePeriodicWave(table) {
   }
 }
 
+/* exported changePeriodicWaveValue */
 function changePeriodicWaveValue(input) {
   const table = input.parentNode.parentNode.parentNode;
   try {
@@ -726,6 +735,7 @@ function changePeriodicWaveValue(input) {
   }
 }
 
+/* exported addPeriodicWaveRow */
 function addPeriodicWaveRow(button) {
   const buttonRow = button.parentNode.parentNode;
   const table = buttonRow.parentNode;
@@ -741,6 +751,7 @@ function addPeriodicWaveRow(button) {
   }
 }
 
+/* exported removePeriodicWaveRow */
 function removePeriodicWaveRow(button) {
   const buttonRow = button.parentNode.parentNode;
   const table = buttonRow.parentNode;
@@ -883,7 +894,7 @@ function changeParamValue(input) {
     tree[subtree.id][input.name] = input.value;
   } catch (ex) {
     alert('invalid parameter value: ' + ex.message);
-    input.value = tree[subtree.id][input.name]
+    input.value = tree[subtree.id][input.name];
   }
 }
 
@@ -1163,7 +1174,7 @@ function loadBufferFromURL(button) {
   fetch(input.value).then(function(response) {
     return response.arrayBuffer().
       then(function(arrayBuffer) {
-	loadBuffer(audioBufferLI, arrayBuffer)
+	loadBuffer(audioBufferLI, arrayBuffer);
       });
   }).catch(function(err) {
     console.error(err);
@@ -1278,7 +1289,8 @@ function nodeToJSON(nodeData) {
 }
 
 function nodeFromJSON(json) {
-  // make full nodeData, including subtree with fields and params, except don't add subtree to its parent yet, and keep children as just ID strings
+  // make full nodeData, including subtree with fields and params, except don't
+  // add subtree to its parent yet, and keep children as just ID strings
   const nodeData =
     (json.type == 'AudioDestinationNode' ?
       tree.destination : makeChild(json.type));
@@ -1293,8 +1305,8 @@ function nodeFromJSON(json) {
 	continue;
       }
       const fieldData = nodeData.fields[field];
+      let val = json.fields[field];
       try {
-	let val = json.fields[field];
 	switch (fieldData.type) {
 	  // TODO validate boolean, enum fields?
 	  case 'boolean':
@@ -1335,7 +1347,8 @@ function nodeFromJSON(json) {
 	    }
 	    break;
 	  case 'AudioBuffer': {
-	    const arrayBuffer = Uint8Array.from(base64js.toByteArray(val)).buffer;
+	    const arrayBuffer =
+	      Uint8Array.from(base64js.toByteArray(val)).buffer;
 	    loadBuffer(fieldData.subtree, arrayBuffer, fieldData);
 	    val = fieldData.value;
 	    break;
@@ -1343,7 +1356,7 @@ function nodeFromJSON(json) {
 	}
 	fieldData.value = val;
       } catch (ex) {
-	console.warn('invalid field value ' + JSON.stringify(val) + ', using default:')
+	console.warn('invalid field value ' + JSON.stringify(val) + ', using default:');
 	console.warn(ex);
       }
     }
@@ -1443,7 +1456,7 @@ function loadTree(jsonStr) {
 	children: [],
 	subtree: document.getElementById('destination')
       }
-    }
+    };
     document.querySelector('#destination > .children').innerHTML = '';
     // make sure new IDs don't interfere with loaded ones
     // FIXME ID inflation
@@ -1595,7 +1608,7 @@ function PlayingNote(noteNum, velocity, onset) {
       }
       return Promise.resolve(audioNode);
     } else { // ordinary AudioNode
-      const typeData = nodeTypes[nodeData.type]
+      const typeData = nodeTypes[nodeData.type];
       const audioNode = ctx[typeData.create]();
       if (nodeData.label != '') {
 	this.audioNodes[nodeData.label] = audioNode;
@@ -1609,7 +1622,9 @@ function PlayingNote(noteNum, velocity, onset) {
 	  grandkids.children[0].getElementsByTagName('canvas')[0];
 	const timeCanvas =
 	  grandkids.children[1].getElementsByTagName('canvas')[0];
-	requestAnimationFrame(this.drawAnalysis.bind(this, freqCanvas, timeCanvas, audioNode));
+	requestAnimationFrame(
+	  this.drawAnalysis.bind(this, freqCanvas, timeCanvas, audioNode)
+	);
       }
       // save isPrevCondTrue (so nested conditions don't leak out)
       const oldIsPrevCondTrue = window.isPrevCondTrue;
@@ -1810,7 +1825,9 @@ function PlayingNote(noteNum, velocity, onset) {
     analyserNode.getByteTimeDomainData(timeData);
     this.drawTimeAnalysis(timeCanvas, timeData);
     if (!this.isEnded) {
-      requestAnimationFrame(this.drawAnalysis.bind(this, freqCanvas, timeCanvas, analyserNode));
+      requestAnimationFrame(
+	this.drawAnalysis.bind(this, freqCanvas, timeCanvas, analyserNode)
+      );
     }
   }
 
@@ -1832,7 +1849,7 @@ document.getElementById('board-select').onchange = function(evt) {
     keyboard.style.display = 'none';
     touchboard.style.display = null;
   }
-}
+};
 
 function isAsciiKeyCode(code) {
   return ((code >= 48 && code <= 59) || (code >= 65 && code <= 90));
@@ -1912,9 +1929,9 @@ keyboard.onmousedown = function(evt) {
     const noteNum = evt.target.className.slice(0,2);
     mouseOscillator = new PlayingNote(noteNum);
     mouseOscillator.onended =
-      function () {
+      function() {
 	td.classList.remove('keydown');
-      }
+      };
     setTimeout(function() { td.classList.add("keydown"); }, 0);
   }
   evt.preventDefault();
@@ -1936,9 +1953,9 @@ forEach(function(td) {
 	mouseOscillator = new PlayingNote(noteNum);
 	//console.log("enter " + mouseOscillator.vars.f);
 	mouseOscillator.onended =
-	  function () {
+	  function() {
 	    td.classList.remove('keydown');
-	  }
+	  };
 	setTimeout(function() { td.classList.add("keydown"); }, 0);
       }
     }
@@ -1976,8 +1993,10 @@ function initTouchboard() {
   }
 }
 
-const touch2touched = {}; // map touch identifier to touched element
-const touchNote2osc = {}; // map MIDI note number to playing note started by touch
+// map touch identifier to touched element
+const touch2touched = {};
+// map MIDI note number to playing note started by touch
+const touchNote2osc = {};
 
 touchboard.ontouchstart = function(evt) {
   evt.preventDefault();
@@ -2020,7 +2039,7 @@ touchboard.ontouchmove = function(evt) {
     }
     // start new touched note
     if (newTouched.matches('.b, .w') && !newTouched.matches('.keydown')) {
-      newNoteNum = newTouched.classList.item(0);
+      const newNoteNum = newTouched.classList.item(0);
       const newOsc = new PlayingNote(newNoteNum);
       touchNote2osc[newNoteNum] = newOsc;
       newOsc.onended =
