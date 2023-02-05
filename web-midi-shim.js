@@ -2,11 +2,11 @@
 // get wat working
 
 // enter this in the web console to apply the shim:
-// var wms = document.createElement('script'); wms.src='web-midi-shim.js'; document.body.appendChild(wms);
+// const wms = document.createElement('script'); wms.src='web-midi-shim.js'; document.body.appendChild(wms);
 
 function MIDIPort() {
   this.socket = new WebSocket('ws://localhost:22468', 'midi');
-  var that = this;
+  const that = this;
   this.socket.addEventListener('message', function(evt) {
     if ('function' == typeof that.onmidimessage) {
       that.onmidimessage({ data: JSON.parse(evt.data) });
@@ -17,7 +17,7 @@ function MIDIPort() {
 navigator.requestMIDIAccess = function(opts) {
   return {
     then: function(cb) {
-      var port = new MIDIPort();
+      const port = new MIDIPort();
       cb({ inputs: [port] });
     }
   };

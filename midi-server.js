@@ -48,7 +48,7 @@ wsServer.on('request', function(request) {
     console.log('bad origin: ' + request.origin);
     return;
   }
-  var connection = request.accept('midi', request.origin);
+  const connection = request.accept('midi', request.origin);
   console.log('accepted ws connection');
   fs.open(dev, 'r', function(err, fd) {
     eachMessage(fd, function(buf) {

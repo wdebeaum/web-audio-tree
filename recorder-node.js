@@ -4,7 +4,7 @@ if ('AudioWorkletNode' in window) {
     constructor(context, sampleRate) {
       super(context, 'recorder-processor' /*, { numberOfOutputs: 0 }*/);
       this.port.onmessage = (evt) => {
-	var buffer = this.context.createBuffer(1, evt.data.length, sampleRate);
+	const buffer = this.context.createBuffer(1, evt.data.length, sampleRate);
 	buffer.copyToChannel(evt.data, 0);
 	this.resolve(buffer);
       }
@@ -56,11 +56,11 @@ if ('AudioWorkletNode' in window) {
 
     onaudioprocess(evt) {
       if (this.samples.length < this.numSamples + this.quantum) {
-	var newSamples = new Float32Array(this.samples.length * 2);
+	const newSamples = new Float32Array(this.samples.length * 2);
 	newSamples.set(this.samples);
 	this.samples = newSamples;
       }
-      var sa =
+      const sa =
         this.samples.subarray(this.numSamples, this.numSamples + this.quantum);
       evt.inputBuffer.copyFromChannel(sa, 0);
       this.numSamples += this.quantum;
@@ -69,7 +69,7 @@ if ('AudioWorkletNode' in window) {
 
     getBuffer() {
       return new Promise((resolve, reject) => {
-	var buffer =
+	const buffer =
 	  this.context.createBuffer(1, this.numSamples, this.sampleRate);
 	buffer.copyToChannel(this.samples.subarray(0, this.numSamples), 0);
 	resolve(buffer);

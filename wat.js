@@ -5,8 +5,8 @@
 // no webkit prefix plz
 Object.getOwnPropertyNames(window).forEach((k) => {
   if (/^webkit/.test(k)) {
-    var noPrefix = k.substring(6);
-    var noPrefixLower = noPrefix.substring(0,1).toLowerCase() + noPrefix.substring(1);
+    const noPrefix = k.substring(6);
+    const noPrefixLower = noPrefix.substring(0,1).toLowerCase() + noPrefix.substring(1);
     if (!(noPrefix in window) && !(noPrefixLower in window)) {
       window[noPrefix] = window[k];
       window[noPrefixLower] = window[k];
@@ -24,9 +24,9 @@ const nodeTypes = {
   }
 };
 
-var ctx;
+let ctx;
 
-var tree = { // map IDs to data structures
+let tree = { // map IDs to data structures
   destination: {
     type: 'AudioDestinationNode',
     label: 'destination',
@@ -36,21 +36,21 @@ var tree = { // map IDs to data structures
     subtree: document.getElementById('destination')
   }
 };
-var nextID = 0;
+let nextID = 0;
 function getNextID() {
   return 'wat-node-' + (nextID++);
 }
 
 // clone the given template node, but give it a new id attribute
 function cloneNewID(templateNode) {
-  var clone = templateNode.cloneNode(true);
+  const clone = templateNode.cloneNode(true);
   clone.setAttribute('id', getNextID());
   return clone;
 }
 
 // clone the given template node, but remove its id attribute
 function cloneNoID(templateNode) {
-  var clone = templateNode.cloneNode(true);
+  const clone = templateNode.cloneNode(true);
   clone.removeAttribute('id');
   return clone;
 }
@@ -78,14 +78,14 @@ function initWebAudio() {
 
   // fill nodeTypes by inspecting BaseAudioContext and example nodes created
   // using ctx
-  for (var k in BaseAudioContext.prototype) {
+  for (const k in BaseAudioContext.prototype) {
     if (k == 'createScriptProcessor') { continue; } // deprecated
     if (/^create/.test(k)) {
-      var v = BaseAudioContext.prototype[k];
+      const v = BaseAudioContext.prototype[k];
       if (('function' == typeof v) && v.length == 0) {
 	// found a method of BaseAudioContext taking no arguments, whose name
 	// starts with 'create'. guess it will create a type of node!
-	var typeName = k.replace(/^create/,'') + 'Node';
+	let typeName = k.replace(/^create/,'') + 'Node';
 	// if not, try prepending 'Audio'
 	if (!AudioNode.isPrototypeOf(window[typeName])) {
 	  typeName = 'Audio' + typeName;
@@ -93,7 +93,7 @@ function initWebAudio() {
 	// if we have the name of an AudioNode subtype
 	if (AudioNode.isPrototypeOf(window[typeName])) {
 	  // try making an example instance
-	  var example = ctx[k]();
+	  const example = ctx[k]();
 	  // if it's not an instance, skip it
 	  if (!(example instanceof window[typeName])) { continue; }
 	  // if it is, make an entry in nodeTypes
@@ -109,11 +109,11 @@ function initWebAudio() {
 	    fields: {}
 	  };
 	  // fill params and fields
-	  for (var param in example) {
+	  for (const param in example) {
 	    if (param in AudioScheduledSourceNode.prototype) {
 	      // skip generic fields/methods
 	    } else if (example[param] instanceof AudioParam) {
-	      var automationRate = example[param].automationRate;
+	      let automationRate = example[param].automationRate;
 	      if (!automationRate) { // some browsers don't do this, so fake it
 		automationRate =
 		  // defaults according to the spec
@@ -128,15 +128,15 @@ function initWebAudio() {
 	      };
 	    } else if ('function' == typeof example[param]) {
 	      if (/^set/.test(param)) {
-		var paramTypeName = param.substring(3);
-		var paramCreate = 'create' + paramTypeName;
+		const paramTypeName = param.substring(3);
+		const paramCreate = 'create' + paramTypeName;
 		if (example[param].length == 1 &&
 		    ('function' == typeof window[paramTypeName]) &&
 		    (paramCreate in BaseAudioContext.prototype) &&
 		    ('function' ==
 		       typeof BaseAudioContext.prototype[paramCreate])) {
-		  var numArgs = BaseAudioContext.prototype[paramCreate].length;
-		  var args = new Array(numArgs).fill('?').join(', ');
+		  const numArgs = BaseAudioContext.prototype[paramCreate].length;
+		  const args = new Array(numArgs).fill('?').join(', ');
 		  console.log(typeName + '#' + param + '(' + paramCreate + '(' + args + '))');
 		  nodeTypes[typeName].fields[paramTypeName] = {
 		    type: paramTypeName,
@@ -145,14 +145,14 @@ function initWebAudio() {
 		    set: param
 		  };
 		} else {
-		  var numArgs = example[param].length;
-		  var args = new Array(numArgs).fill('?').join(', ');
+		  const numArgs = example[param].length;
+		  const args = new Array(numArgs).fill('?').join(', ');
 		  console.log(typeName + '#' + param + '(' + args + ')');
 		  // meh
 		}
 	      } // else ignore non-setter functions
 	    } else {
-	      var paramType = typeof example[param];
+	      let paramType = typeof example[param];
 	      if (paramType == 'object') {
 		if (example[param] !== null) {
 		  paramType = example[param].constructor.name;
@@ -171,7 +171,7 @@ function initWebAudio() {
 		   param == 'reduction')) {
 		continue;
 	      }
-	      var values;
+	      let values;
 	      if (paramType == 'enum') {
 		switch (typeName + '#' + param) {
 		  case 'BiquadFilterNode#type':
@@ -212,14 +212,14 @@ function initWebAudio() {
   }
 
   // fill the add-child template from sorted nodeTypes (but only certain types)
-  var addChildTemplate =
+  const addChildTemplate =
     document.querySelector('#audio-node-template > .add-child');
   Object.keys(nodeTypes).sort().forEach(function(name) {
-    var desc = nodeTypes[name];
+    const desc = nodeTypes[name];
     // if the node has exactly one output, it can be a child node
     // if it has more than one input, we can't really use it
     if (desc.numberOfOutputs == 1 && desc.numberOfInputs <= 1) {
-      var opt = document.createElement('option');
+      const opt = document.createElement('option');
       opt.innerHTML = name;
       addChildTemplate.appendChild(opt);
     }
@@ -227,18 +227,18 @@ function initWebAudio() {
 
   // add a clone of the add-child template to the destination li, as well as a
   // place for the children to be created
-  var dest = document.getElementById('destination')
+  const dest = document.getElementById('destination')
   dest.appendChild(cloneNoID(addChildTemplate));
   dest.appendChild(document.getElementById('save-load-controls'));
-  var ul = document.createElement('ul');
+  let ul = document.createElement('ul');
   ul.className = 'children';
   dest.appendChild(ul);
   dest.classList.replace('leaf', 'expanded');
 
   // also add them to the audio param template
-  var apt = document.getElementById('audio-param-template')
+  const apt = document.getElementById('audio-param-template')
   apt.appendChild(cloneNoID(addChildTemplate));
-  var ul = document.createElement('ul');
+  ul = document.createElement('ul');
   ul.className = 'children';
   apt.appendChild(ul);
   apt.classList.replace('leaf', 'expanded');
@@ -258,15 +258,15 @@ function initWebAudio() {
   document.getElementById('web-audio-status').classList.replace('unknown', 'supported');
 }
 
-var note2osc = {};
+const note2osc = {};
 
 function handleMIDIMessage(evt) {
   try {
     //console.log(evt.data);
     if (evt.data.length == 3) {
-      var cmd = evt.data[0] >> 4;
-      var noteNum = evt.data[1];
-      var velocity = evt.data[2] / 127; // divide so velocity is in [0,1]
+      const cmd = evt.data[0] >> 4;
+      const noteNum = evt.data[1];
+      const velocity = evt.data[2] / 127; // divide so velocity is in [0,1]
       if (cmd == 8 || // note off
 	  (cmd == 9 && velocity == 0)) { // note on with vel 0 (i.e. off)
 	//console.log({ note: 'off', num: noteNum });
@@ -286,8 +286,8 @@ function handleMIDIMessage(evt) {
   }
 }
 
-var midiInputs = undefined;
-var selectedMIDIInput = undefined;
+let midiInputs = undefined;
+let selectedMIDIInput = undefined;
 
 function changeMIDIInput(evt) {
   if (selectedMIDIInput)
@@ -306,12 +306,12 @@ function initWebMIDI() {
   navigator.requestMIDIAccess({ sysex: false, software: false }).
   then(function(midiAccess) {
     // get the MIDI input ports and use them to populate the select
-    var midiInputSelect = document.getElementById('midi-input');
-    var firstInput = undefined;
-    var firstNonThroughInput = undefined;
+    const midiInputSelect = document.getElementById('midi-input');
+    let firstInput = undefined;
+    let firstNonThroughInput = undefined;
     midiInputs = midiAccess.inputs;
     midiInputs.forEach(function(inputPort, key) {
-      var option = document.createElement('option');
+      const option = document.createElement('option');
       option.value = key;
       option.innerText = inputPort.name;
       midiInputSelect.appendChild(option);
@@ -345,11 +345,11 @@ document.getElementById('start').onclick = function(evt) {
  */
 
 function addChild(select) {
-  var typeName = select.value;
+  const typeName = select.value;
   select.value = 'add child';
-  var parentSubtree = select.parentNode
-  var children = parentSubtree.querySelector('.children');
-  var data = makeChild(typeName);
+  const parentSubtree = select.parentNode
+  const children = parentSubtree.querySelector('.children');
+  const data = makeChild(typeName);
   tree[data.subtree.id] = data;
   tree[parentSubtree.id].children.push(data);
   children.appendChild(data.subtree);
@@ -357,8 +357,8 @@ function addChild(select) {
 }
 
 function makeChild(typeName) {
-  var newChild;
-  var data = {
+  let newChild;
+  const data = {
     type: typeName,
     label: '',
     fields: {},
@@ -370,7 +370,7 @@ function makeChild(typeName) {
   } else if (['if','elif','else'].includes(typeName)) {
     newChild = cloneNewID(document.getElementById('audio-node-template'));
     newChild.firstChild.innerHTML = typeName;
-    var input = newChild.getElementsByClassName('label')[0];
+    const input = newChild.getElementsByClassName('label')[0];
     if (typeName == 'else') {
       input.parentNode.removeChild(input);
     } else {
@@ -389,18 +389,18 @@ function makeChild(typeName) {
       newChild.getElementsByClassName('add-child')[0].remove();
       newChild.classList.add('source');
     }
-    var grandkids = newChild.getElementsByClassName('children')[0];
+    const grandkids = newChild.getElementsByClassName('children')[0];
     // AnalyserNode output data
     if (typeName == 'AnalyserNode') {
-      var freqSubtree = cloneNoID(document.getElementById('AnalyserNode-data-template'));
+      const freqSubtree = cloneNoID(document.getElementById('AnalyserNode-data-template'));
       freqSubtree.firstChild.innerHTML = 'Uint8Array frequencyData';
       grandkids.appendChild(freqSubtree);
-      var timeSubtree = cloneNoID(document.getElementById('AnalyserNode-data-template'));
+      const timeSubtree = cloneNoID(document.getElementById('AnalyserNode-data-template'));
       timeSubtree.firstChild.innerHTML = 'Uint8Array timeDomainData';
       grandkids.appendChild(timeSubtree);
     }
     // non-AudioParam fields
-    var fields = nodeTypes[typeName].fields;
+    const fields = nodeTypes[typeName].fields;
     // start()/end() calls for scheduled nodes (as fake fields)
     if (nodeTypes[typeName].isScheduled) {
       data.fields.startWhen = {
@@ -421,11 +421,11 @@ function makeChild(typeName) {
       };
       grandkids.appendChild(data.fields.stopWhen.subtree);
     }
-    var fieldNames = Object.keys(fields).sort();
+    const fieldNames = Object.keys(fields).sort();
     fieldNames.forEach(function(name) {
-      var type = fields[name].type;
-      var fieldTemplate = document.getElementById(type + '-field-template');
-      var field = cloneNewID(fieldTemplate);
+      const type = fields[name].type;
+      const fieldTemplate = document.getElementById(type + '-field-template');
+      const field = cloneNewID(fieldTemplate);
       data.fields[name] = {
 	type: type,
 	value: nodeTypes[typeName].fields[name].defaultValue,
@@ -439,23 +439,25 @@ function makeChild(typeName) {
 	field.querySelector('span.node').innerHTML = type + ' ' + name + ' = ';
       }
       switch (type) {
-	case 'boolean':
-	  var input = field.querySelector('input');
+	case 'boolean': {
+	  const input = field.querySelector('input');
 	  input.name = name;
 	  if (fields[name].defaultValue) {
 	    input.setAttribute('checked', 'checked');
 	  }
 	  break;
-	case 'number':
-	  var input = field.querySelector('input');
+	}
+	case 'number': {
+	  const input = field.querySelector('input');
 	  input.name = name;
 	  input.value = fields[name].defaultValue;
 	  break;
-        case 'enum':
-	  var select = field.querySelector('select.enum');
+	}
+        case 'enum': {
+	  const select = field.querySelector('select.enum');
 	  select.name = name;
 	  fields[name].values.forEach(function(v) {
-	    var option = document.createElement('option');
+	    const option = document.createElement('option');
 	    if (v == fields[name].defaultValue) {
 	      option.setAttribute('selected', 'selected');
 	    }
@@ -469,13 +471,15 @@ function makeChild(typeName) {
 	    select.appendChild(option);
 	  });
 	  break;
+	}
 	case 'PeriodicWave':
 	  field.querySelector('.PeriodicWave-row').remove();
 	  break;
-	case 'Float32Array':
-	  var input = field.querySelector('input');
+	case 'Float32Array': {
+	  const input = field.querySelector('input');
 	  input.name = name;
 	  break;
+	}
 	case 'AudioBuffer':
 	  // nothing?
 	  break;
@@ -483,10 +487,10 @@ function makeChild(typeName) {
       grandkids.appendChild(field);
     });
     // AudioParams
-    var params = nodeTypes[typeName].params;
-    var paramTemplate = document.getElementById('audio-param-template');
+    const params = nodeTypes[typeName].params;
+    const paramTemplate = document.getElementById('audio-param-template');
     // sort parameter names k-rate before a-rate, and then alphabetically
-    var paramNames = Object.keys(params).sort(function(a,b) {
+    const paramNames = Object.keys(params).sort(function(a,b) {
       if (params[a].automationRate == 'k-rate' &&
 	  params[b].automationRate == 'a-rate') {
 	return -1;
@@ -502,8 +506,8 @@ function makeChild(typeName) {
       }
     });
     paramNames.forEach(function(name) {
-      var param = cloneNewID(paramTemplate);
-      var paramData = {
+      const param = cloneNewID(paramTemplate);
+      const paramData = {
 	type: 'AudioParam',
 	value: params[name].defaultValue,
 	valueFn: function() { return this.value; },
@@ -534,7 +538,7 @@ function getDescendantLabels(nodeData, labels) {
   if (nodeData.type != 'reference' && nodeData.label != '') {
     labels.push(nodeData.label);
   }
-  for (var name in nodeData.params) {
+  for (const name in nodeData.params) {
     nodeData.params[name].children.forEach(function(child) {
       getDescendantLabels(child, labels);
     });
@@ -551,7 +555,7 @@ function isDescendant(ancestorID, descendantID) {
   } else if (descendantID == 'destination') { // root
     return false;
   } else {
-    var parentID =
+    const parentID =
       document.getElementById(descendantID).parentNode.parentNode.id;
     return isDescendant(ancestorID, parentID);
   }
@@ -560,13 +564,13 @@ function isDescendant(ancestorID, descendantID) {
 // move descendants of the given node out from under it if they are referenced
 // elsewhere, in preparation for removing the node
 function moveReferencedDescendants(nodeData) {
-  var labels = getDescendantLabels(nodeData);
+  const labels = getDescendantLabels(nodeData);
   console.log('descendant labels: ' + labels.join(', '));
-  for (var id in tree) {
-    var refNodeData = tree[id];
+  for (const id in tree) {
+    const refNodeData = tree[id];
     if (refNodeData.type == 'reference') {
       console.log('reference ' + id + ' has label ' + refNodeData.label);
-      var labelIndex = labels.indexOf(refNodeData.label);
+      const labelIndex = labels.indexOf(refNodeData.label);
       console.log('labelIndex = ' + labelIndex);
       if (labelIndex >= 0 &&
 	  labels.includes(refNodeData.label) &&
@@ -585,7 +589,7 @@ function deleteSubtree(nodeData) {
     nodeData.children.forEach(deleteSubtree);
   }
   if ('params' in nodeData) {
-    for (var name in nodeData.params) {
+    for (const name in nodeData.params) {
       deleteSubtree(nodeData.params[name]);
     }
   }
@@ -602,21 +606,21 @@ function deleteSubtree(nodeData) {
 }
 
 function deleteChild(childSubtree) {
-  var removeFromList;
+  let removeFromList;
   if (childSubtree.matches('.audio-node')) {
     removeFromList = 'children';
   } else if (childSubtree.matches('.automation')) {
     removeFromList = 'automation';
   }
   if (childSubtree.id && (childSubtree.id in tree)) {
-    var childData = tree[childSubtree.id];
+    const childData = tree[childSubtree.id];
     if (removeFromList == 'children') { // automation can't have descendants
       moveReferencedDescendants(childData);
     }
     deleteSubtree(childData);
     if (removeFromList) {
-      var parentData = tree[childSubtree.parentNode.parentNode.id];
-      var i = parentData[removeFromList].indexOf(childData);
+      const parentData = tree[childSubtree.parentNode.parentNode.id];
+      const i = parentData[removeFromList].indexOf(childData);
       if (i >= 0) {
 	parentData[removeFromList].splice(i, 1);
       }
@@ -626,13 +630,13 @@ function deleteChild(childSubtree) {
 }
 
 function addAutomation(select) {
-  var fnName = select.value;
+  const fnName = select.value;
   select.value = 'add automation';
-  var children = select.parentNode.getElementsByClassName('children')[0];
-  var newChild = cloneNewID(document.getElementById(fnName + '-template'));
+  const children = select.parentNode.getElementsByClassName('children')[0];
+  const newChild = cloneNewID(document.getElementById(fnName + '-template'));
   children.appendChild(newChild);
-  var numArgs = newChild.getElementsByTagName('input').length;
-  var childData = {
+  const numArgs = newChild.getElementsByTagName('input').length;
+  const childData = {
     fn: fnName,
     args: new Array(numArgs),
     argFns: new Array(numArgs),
@@ -643,29 +647,29 @@ function addAutomation(select) {
 }
 
 function moveAutomation(button) {
-  var li = button.parentNode;
-  var dir = button.innerText;
-  var data = tree[li.id];
-  var parentData = tree[li.parentNode.parentNode.id];
-  var i = parentData.automation.indexOf(data);
+  const li = button.parentNode;
+  const dir = button.innerText;
+  const data = tree[li.id];
+  const parentData = tree[li.parentNode.parentNode.id];
+  const i = parentData.automation.indexOf(data);
   if (dir == '↑') {
-    var prev = li.previousElementSibling;
+    const prev = li.previousElementSibling;
     if (prev) {
       li.parentNode.insertBefore(li, prev);
     }
     if (i > 0) {
-      var tmp = parentData.automation[i];
+      const tmp = parentData.automation[i];
       parentData.automation[i] = parentData.automation[i-1];
       parentData.automation[i-1] = tmp;
     }
   } else { // ↓
-    var next = li.nextElementSibling;
+    const next = li.nextElementSibling;
     if (next) {
-      var nextNext = next.nextElementSibling;
+      const nextNext = next.nextElementSibling;
       li.parentNode.insertBefore(li, nextNext);
     }
     if (i >= 0 && i < parentData.automation.length - 1) {
-      var tmp = parentData.automation[i];
+      const tmp = parentData.automation[i];
       parentData.automation[i] = parentData.automation[i+1];
       parentData.automation[i+1] = tmp;
     }
@@ -673,14 +677,14 @@ function moveAutomation(button) {
 }
 
 function updatePeriodicWave(table) {
-  var subtree = table.parentNode.parentNode.parentNode.parentNode;
-  var data = tree[subtree.id];
-  var valueExprs = [];
+  const subtree = table.parentNode.parentNode.parentNode.parentNode;
+  const data = tree[subtree.id];
+  const valueExprs = [];
   // NodeList, y u no have map?
   table.querySelectorAll('input').forEach(function(input) {
     valueExprs.push(input.value);
   });
-  var select = subtree.querySelector("select[name='type']");
+  const select = subtree.querySelector("select[name='type']");
   if (valueExprs.length == 0) { // no PeriodicWave
     // reenable the select and set it to the default value, if we had a
     // PeriodicWave before
@@ -705,16 +709,16 @@ function updatePeriodicWave(table) {
 }
 
 function changePeriodicWaveValue(input) {
-  var table = input.parentNode.parentNode.parentNode;
+  const table = input.parentNode.parentNode.parentNode;
   try {
     updatePeriodicWave(table);
   } catch (ex) {
     console.error(ex);
     alert('invalid PeriodicWave value: ' + ex.message);
     // set the input value back to what it was
-    var subtree = table.parentNode.parentNode.parentNode.parentNode;
-    var data = tree[subtree.id];
-    var i =
+    const subtree = table.parentNode.parentNode.parentNode.parentNode;
+    const data = tree[subtree.id];
+    const i =
       table.querySelectorAll('input').
       findIndex(function(inp) { return (inp === input); });
     if (i >= 0)
@@ -723,10 +727,10 @@ function changePeriodicWaveValue(input) {
 }
 
 function addPeriodicWaveRow(button) {
-  var buttonRow = button.parentNode.parentNode;
-  var table = buttonRow.parentNode;
-  var rowTemplate = document.getElementById('PeriodicWave-row-template');
-  var newRow = cloneNoID(rowTemplate);
+  const buttonRow = button.parentNode.parentNode;
+  const table = buttonRow.parentNode;
+  const rowTemplate = document.getElementById('PeriodicWave-row-template');
+  const newRow = cloneNoID(rowTemplate);
   newRow.children[0].innerHTML = table.children.length - 2;
   table.insertBefore(newRow, buttonRow);
   try {
@@ -738,9 +742,9 @@ function addPeriodicWaveRow(button) {
 }
 
 function removePeriodicWaveRow(button) {
-  var buttonRow = button.parentNode.parentNode;
-  var table = buttonRow.parentNode;
-  var rowToRemove = buttonRow.previousElementSibling;
+  const buttonRow = button.parentNode.parentNode;
+  const table = buttonRow.parentNode;
+  const rowToRemove = buttonRow.previousElementSibling;
   if (rowToRemove) {
     rowToRemove.remove();
     try {
@@ -754,17 +758,17 @@ function removePeriodicWaveRow(button) {
 
 function makeValueFn(valueExpr, expectedType) {
   if (!expectedType) { expectedType = 'value'; }
-  var jsValueExpr;
+  let jsValueExpr;
   switch (expectedType) {
     // case 'AudioBuffer': // TODO?
-    case 'PeriodicWave':
+    case 'PeriodicWave': {
       // in this case, valueExpr is an array of expressions in the order they
       // appear as input fields in the document
       if (valueExpr.length % 2 != 0)
 	throw new Error('expected even number of PeriodicWave elements');
-      var real = [];
-      var imag = [];
-      for (var i = 0; i < valueExpr.length; i += 2) {
+      const real = [];
+      const imag = [];
+      for (let i = 0; i < valueExpr.length; i += 2) {
 	real.push(ValueParser.parse(''+valueExpr[i], {startRule: 'value'}));
 	imag.push(ValueParser.parse(''+valueExpr[i+1], {startRule: 'value'}));
       }
@@ -774,6 +778,7 @@ function makeValueFn(valueExpr, expectedType) {
 	  'new Float32Array([' + imag.join(', ') + '])' +
 	')';
       break;
+    }
     case 'value': // fall through
     case 'array':
     case 'condition':
@@ -790,9 +795,9 @@ function makeValueFn(valueExpr, expectedType) {
 }
 
 function changeLabel(input) {
-  var subtree = input.parentNode;
-  var data = tree[subtree.id];
-  var oldLabel = data.label;
+  const subtree = input.parentNode;
+  const data = tree[subtree.id];
+  const oldLabel = data.label;
   if (subtree.matches('.reference')) { // ... on a reference
     // ensure that the new label actually refers to an existing node
     if (!(input.value in tree)) {
@@ -803,9 +808,9 @@ function changeLabel(input) {
   } else { // setting a label field on a non-reference
     // ensure that we can look up the data by its (nonempty) label in tree,
     // and that any references to this node continue to reference this node
-    var references = [];
+    const references = [];
     if (oldLabel && oldLabel != '') {
-      for (var id in tree) {
+      for (const id in tree) {
 	if (tree[id].type == 'reference' && tree[id].label == oldLabel) {
 	  references.push(tree[id]);
 	}
@@ -834,8 +839,8 @@ function changeLabel(input) {
 }
 
 function changeCondition(input) {
-  var subtree = input.parentNode;
-  var data = tree[subtree.id];
+  const subtree = input.parentNode;
+  const data = tree[subtree.id];
   try {
     data.valueFn = makeValueFn(input.value, 'condition');
     data.value = input.value;
@@ -846,8 +851,8 @@ function changeCondition(input) {
 }
 
 function changeFieldValue(input) {
-  var subtree = input.parentNode.parentNode.parentNode;
-  var field = tree[subtree.id].fields[input.name];
+  const subtree = input.parentNode.parentNode.parentNode;
+  const field = tree[subtree.id].fields[input.name];
   try {
     switch (field.type) {
       case 'boolean':
@@ -872,7 +877,7 @@ function changeFieldValue(input) {
 }
 
 function changeParamValue(input) {
-  var subtree = input.parentNode;
+  const subtree = input.parentNode;
   try {
     tree[subtree.id].valueFn = makeValueFn(input.value);
     tree[subtree.id][input.name] = input.value;
@@ -883,8 +888,8 @@ function changeParamValue(input) {
 }
 
 function changeArg(input) {
-  var i = 0;
-  var sib = input.previousElementSibling;
+  let i = 0;
+  let sib = input.previousElementSibling;
   while (sib) {
     if (sib.tagName == 'INPUT') {
       i++;
@@ -902,16 +907,16 @@ function changeArg(input) {
 
 function moveHere(referenceSubtree) {
   // variables here are named for the old state
-  var reference = tree[referenceSubtree.id];
-  var referent = tree[reference.label];
-  var referenceUL = referenceSubtree.parentNode;
-  var referentUL = referent.subtree.parentNode;
-  var referenceParent = tree[referenceUL.parentNode.id];
-  var referentParent = tree[referentUL.parentNode.id];
-  var referenceIndex = referenceParent.children.indexOf(reference);
-  var referentIndex = referentParent.children.indexOf(referent);
-  var referenceNext = referenceSubtree.nextElementSibling;
-  var referentNext = referent.subtree.nextElementSibling;
+  const reference = tree[referenceSubtree.id];
+  const referent = tree[reference.label];
+  const referenceUL = referenceSubtree.parentNode;
+  const referentUL = referent.subtree.parentNode;
+  const referenceParent = tree[referenceUL.parentNode.id];
+  const referentParent = tree[referentUL.parentNode.id];
+  const referenceIndex = referenceParent.children.indexOf(reference);
+  const referentIndex = referentParent.children.indexOf(referent);
+  const referenceNext = referenceSubtree.nextElementSibling;
+  const referentNext = referent.subtree.nextElementSibling;
   // swap the DOM nodes
   referenceUL.insertBefore(referent.subtree, referenceNext);
   referentUL.insertBefore(referenceSubtree, referentNext);
@@ -926,39 +931,39 @@ function moveHere(referenceSubtree) {
 // originals instead of copies.
 // buildLoadedTree should be called after all nodes are copied.
 function copyNode(nodeData, idmap) {
-  var isRoot = (idmap === undefined);
+  const isRoot = (idmap === undefined);
   if (isRoot) idmap = {};
   if (nodeData.subtree.id in idmap) { // already copied/referenced
     return tree[idmap[nodeData.subtree.id]];
   } else if ((!isRoot) &&
 	     ('label' in nodeData) && nodeData.label != '') { // reference
-    var json = {
+    const json = {
       type: 'reference',
       label: nodeData.label,
       fields: {},
       params: {},
       children: []
     };
-    var reference = nodeFromJSON(json);
+    const reference = nodeFromJSON(json);
     tree[reference.subtree.id] = reference;
     idmap[nodeData.subtree.id] = reference.subtree.id;
     return reference;
   } else { // copy
-    var json = nodeToJSON(nodeData);
+    const json = nodeToJSON(nodeData);
     if (isRoot && ('label' in json)) json.label = '';
-    var copy = nodeFromJSON(json);
+    const copy = nodeFromJSON(json);
     if ('params' in copy) {
-      for (var param in copy.params) {
-	var paramData = copy.params[param];
+      for (const param in copy.params) {
+	const paramData = copy.params[param];
 	paramData.children = paramData.children.map(function(oldID) {
-	  var childCopy = copyNode(tree[oldID], idmap);
+	  const childCopy = copyNode(tree[oldID], idmap);
 	  return childCopy.subtree.id;
 	});
       }
     }
     if ('children' in copy) {
       copy.children = copy.children.map(function(oldID) {
-	var childCopy = copyNode(tree[oldID], idmap);
+	const childCopy = copyNode(tree[oldID], idmap);
 	return childCopy.subtree.id;
       });
     }
@@ -972,13 +977,13 @@ function copyNode(nodeData, idmap) {
 // buildLoadedTree)
 function copyHere(referenceSubtree) {
   // get relevant variables
-  var reference = tree[referenceSubtree.id];
-  var referent = tree[reference.label];
-  var referenceUL = referenceSubtree.parentNode;
-  var referenceParent = tree[referenceUL.parentNode.id];
-  var referenceIndex = referenceParent.children.indexOf(reference);
+  const reference = tree[referenceSubtree.id];
+  const referent = tree[reference.label];
+  const referenceUL = referenceSubtree.parentNode;
+  const referenceParent = tree[referenceUL.parentNode.id];
+  const referenceIndex = referenceParent.children.indexOf(reference);
   // make the copy
-  var copy = copyNode(referent);
+  const copy = copyNode(referent);
   buildLoadedTree(copy);
   // replace the reference with the copy
   referenceUL.replaceChild(copy.subtree, referenceSubtree);
@@ -988,9 +993,9 @@ function copyHere(referenceSubtree) {
   updateSubtree(copy.subtree, true);
 }
 
-var inputStream;
-var inputSource;
-var recorderNode;
+let inputStream;
+let inputSource;
+let recorderNode;
 
 function startInputSource() {
   if (inputSource) {
@@ -1019,7 +1024,7 @@ function recordBuffer(button) {
   button.setAttribute('onclick', 'stopRecordingBuffer(this)');
   // TODO? push some of this into RecorderNode
   startInputSource().then((source) => {
-    var sampleRate = inputStream.getTracks()[0].getSettings().sampleRate;
+    let sampleRate = inputStream.getTracks()[0].getSettings().sampleRate;
     if (!('number' == typeof sampleRate)) {
       sampleRate = ctx.sampleRate;
     }
@@ -1030,9 +1035,9 @@ function recordBuffer(button) {
 }
 
 function stopRecordingBuffer(button) {
-  var audioBufferLI = button.parentNode;
-  var canvas = audioBufferLI.querySelector('.waveform');
-  var nodeData = tree[audioBufferLI.parentNode.parentNode.id];
+  const audioBufferLI = button.parentNode;
+  const canvas = audioBufferLI.querySelector('.waveform');
+  const nodeData = tree[audioBufferLI.parentNode.parentNode.id];
   button.innerHTML = '●';
   button.className = 'record';
   button.setAttribute('onclick', 'recordBuffer(this)');
@@ -1052,67 +1057,67 @@ function stopRecordingBuffer(button) {
 // with each column of pixels forming a histogram of the sample values it
 // represents
 function drawBuffer(canvas, buffer) {
-  var gctx = canvas.getContext('2d');
-  var w = canvas.width;
-  var h = canvas.height;
+  const gctx = canvas.getContext('2d');
+  const w = canvas.width;
+  const h = canvas.height;
   // clear canvas to black
   gctx.fillStyle = 'black';
   gctx.fillRect(0, 0, w, h);
-  var numSamplesPerChannelColumn = Math.floor(buffer.sampleRate * 10 / w);
-  var numSamplesPerColumn =
+  const numSamplesPerChannelColumn = Math.floor(buffer.sampleRate * 10 / w);
+  const numSamplesPerColumn =
     buffer.numberOfChannels * numSamplesPerChannelColumn;
-  var columnSamples = new Float32Array(numSamplesPerColumn);
-  var columnHistogram = new Uint32Array(h);
-  var columnImageData = gctx.createImageData(1, h);
-  var columnPixels = columnImageData.data;
+  const columnSamples = new Float32Array(numSamplesPerColumn);
+  const columnHistogram = new Uint32Array(h);
+  const columnImageData = gctx.createImageData(1, h);
+  const columnPixels = columnImageData.data;
   // set 100% opacity for all pixels
-  for (var y = 0; y < h; y++) { columnPixels[4*y+3] = 255; }
-  var waveformWidth =
+  for (let y = 0; y < h; y++) { columnPixels[4*y+3] = 255; }
+  const waveformWidth =
     Math.min(w, Math.floor(buffer.length / numSamplesPerChannelColumn));
   // find the range of sample values for the whole buffer
-  var minSample = 1;
-  var maxSample = -1;
-  for (var x = 0; x < waveformWidth; x++) {
-    var startInChannel = numSamplesPerChannelColumn * x;
+  let minSample = 1;
+  let maxSample = -1;
+  for (let x = 0; x < waveformWidth; x++) {
+    const startInChannel = numSamplesPerChannelColumn * x;
     // get all samples from all channels for this column into columnSamples
-    for (var c = 0; c < buffer.numberOfChannels; c++) {
-      var start = numSamplesPerChannelColumn * c;
-      var end = start + numSamplesPerChannelColumn;
-      var channelSamples = columnSamples.subarray(start, end);
+    for (let c = 0; c < buffer.numberOfChannels; c++) {
+      const start = numSamplesPerChannelColumn * c;
+      const end = start + numSamplesPerChannelColumn;
+      const channelSamples = columnSamples.subarray(start, end);
       buffer.copyFromChannel(channelSamples, c, startInChannel);
     }
-    for (var s = 0; s < numSamplesPerColumn; s++) {
+    for (let s = 0; s < numSamplesPerColumn; s++) {
       if (minSample > columnSamples[s]) { minSample = columnSamples[s]; }
       if (maxSample < columnSamples[s]) { maxSample = columnSamples[s]; }
     }
   }
-  var sampleRange = maxSample - minSample;
-  for (var x = 0; x < waveformWidth; x++) {
-    var startInChannel = numSamplesPerChannelColumn * x;
+  const sampleRange = maxSample - minSample;
+  for (let x = 0; x < waveformWidth; x++) {
+    const startInChannel = numSamplesPerChannelColumn * x;
     // get all samples from all channels for this column into columnSamples
-    for (var c = 0; c < buffer.numberOfChannels; c++) {
-      var start = numSamplesPerChannelColumn * c;
-      var end = start + numSamplesPerChannelColumn;
-      var channelSamples = columnSamples.subarray(start, end);
+    for (let c = 0; c < buffer.numberOfChannels; c++) {
+      const start = numSamplesPerChannelColumn * c;
+      const end = start + numSamplesPerChannelColumn;
+      const channelSamples = columnSamples.subarray(start, end);
       buffer.copyFromChannel(channelSamples, c, startInChannel);
     }
     // make a histogram of sample values with one bin per pixel, using the
     // sample value range we found earlier
     columnHistogram.fill(0);
-    for (var s = 0; s < numSamplesPerColumn; s++) {
-      var bin =
+    for (let s = 0; s < numSamplesPerColumn; s++) {
+      const bin =
 	Math.floor((columnSamples[s] - minSample) * h / sampleRange);
       columnHistogram[bin]++;
     }
     // find the maximum count for any histogram bin in this column
-    var maxThisColumn = 0;
-    for (var y = 0; y < h; y++) {
+    let maxThisColumn = 0;
+    for (let y = 0; y < h; y++) {
       if (columnHistogram[y] > maxThisColumn) {
 	maxThisColumn = columnHistogram[y];
       }
     }
     // turn the histogram bins into green pixels of corresponding intensity
-    for (var y = 0; y < h; y++) {
+    for (let y = 0; y < h; y++) {
       columnPixels[4*y+1] = columnHistogram[y] * 255 / maxThisColumn;
       // mark the full range of the wave in less intense blue
       columnPixels[4*y+2] = ((columnHistogram[y] > 0) ? 64 : 0);
@@ -1123,10 +1128,10 @@ function drawBuffer(canvas, buffer) {
 }
 
 function loadBuffer(audioBufferLI, arrayBuffer, fieldData) {
-  var canvas = audioBufferLI.querySelector('.waveform');
+  const canvas = audioBufferLI.querySelector('.waveform');
   if (fieldData === undefined) {
 				  // ul.children li ABSN    id
-    var nodeData = tree[audioBufferLI.parentNode.parentNode.id];
+    const nodeData = tree[audioBufferLI.parentNode.parentNode.id];
     fieldData = nodeData.fields.buffer;
   }
   return ctx.decodeAudioData(arrayBuffer).
@@ -1138,9 +1143,9 @@ function loadBuffer(audioBufferLI, arrayBuffer, fieldData) {
 
 function loadBufferFromFile(input) {
 		   // input label      li buffer
-  var audioBufferLI = input.parentNode.parentNode;
-  var file = input.files[0];
-  var reader = new FileReader();
+  const audioBufferLI = input.parentNode.parentNode;
+  const file = input.files[0];
+  const reader = new FileReader();
   reader.onload = function(evt) {
     loadBuffer(audioBufferLI, evt.target.result).
     catch(function(err) {
@@ -1153,8 +1158,8 @@ function loadBufferFromFile(input) {
 }
 
 function loadBufferFromURL(button) {
-  var input = button.previousElementSibling;
-  var audioBufferLI = button.parentNode;
+  const input = button.previousElementSibling;
+  const audioBufferLI = button.parentNode;
   fetch(input.value).then(function(response) {
     return response.arrayBuffer().
       then(function(arrayBuffer) {
@@ -1169,12 +1174,12 @@ function loadBufferFromURL(button) {
 // encode AudioBuffer data as a wav file in a Uint8Array
 // see http://www-mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/WAVE.html
 function encodeWav(audioBuffer) {
-  var numDataBytes = 2 * audioBuffer.numberOfChannels * audioBuffer.length;
-  var wavHeader = "RIFF    WAVEfmt                     data    ";
-  var wavBytes =
+  const numDataBytes = 2 * audioBuffer.numberOfChannels * audioBuffer.length;
+  const wavHeader = "RIFF    WAVEfmt                     data    ";
+  const wavBytes =
     new Uint8Array(wavHeader.length + numDataBytes);
-  for (var i in wavHeader) { wavBytes[i] = wavHeader.charCodeAt(i); }
-  var wavView = new DataView(wavBytes.buffer);
+  for (const i in wavHeader) { wavBytes[i] = wavHeader.charCodeAt(i); }
+  const wavView = new DataView(wavBytes.buffer);
   wavView.setUint32(4, 36 + numDataBytes, true); // length of rest of file
   wavView.setUint32(16, 16, true); // length of rest of "fmt " chunk
   wavView.setUint16(20, 1, true); // PCM
@@ -1191,10 +1196,10 @@ function encodeWav(audioBuffer) {
   // copy data a sample at a time
   // FIXME? it would probably be more efficient to do this in chunks, but
   // whatever
-  var i = 44;
-  var sample = new Float32Array(1);
-  for (var s = 0; s < audioBuffer.length; s++) {
-    for (var c = 0; c < audioBuffer.numberOfChannels; c++) {
+  let i = 44;
+  const sample = new Float32Array(1);
+  for (let s = 0; s < audioBuffer.length; s++) {
+    for (let c = 0; c < audioBuffer.numberOfChannels; c++) {
       audioBuffer.copyFromChannel(sample, c, s);
       wavView.setInt16(i, Math.round(sample[0] * 32767), true);
       i += 2;
@@ -1204,8 +1209,8 @@ function encodeWav(audioBuffer) {
 }
 
 function saveBlob(blob, filename) {
-  var blobURL = URL.createObjectURL(blob);
-  var link = document.getElementById('file-output');
+  const blobURL = URL.createObjectURL(blob);
+  const link = document.getElementById('file-output');
   link.href = blobURL;
   link.download = filename;
   link.innerHTML = filename;
@@ -1213,14 +1218,14 @@ function saveBlob(blob, filename) {
 }
 
 function saveBuffer(button) {
-  var audioBufferLI = button.parentNode;
-  var bufferSourceLI = audioBufferLI.parentNode.parentNode;
-  var nodeData = tree[bufferSourceLI.id];
-  var filename =
+  const audioBufferLI = button.parentNode;
+  const bufferSourceLI = audioBufferLI.parentNode.parentNode;
+  const nodeData = tree[bufferSourceLI.id];
+  const filename =
     ((nodeData.label == '') ? bufferSourceLI.id : nodeData.label) + '.wav';
-  var audioBuffer = nodeData.fields.buffer.value;
-  var wavBytes = encodeWav(audioBuffer);
-  var wavBlob = new Blob([wavBytes], { type: 'audio/wav' });
+  const audioBuffer = nodeData.fields.buffer.value;
+  const wavBytes = encodeWav(audioBuffer);
+  const wavBlob = new Blob([wavBytes], { type: 'audio/wav' });
   saveBlob(wavBlob, filename);
 }
 
@@ -1229,23 +1234,24 @@ function saveBuffer(button) {
  */
 
 function nodeToJSON(nodeData) {
-  var json = { type: nodeData.type };
+  const json = { type: nodeData.type };
   if ('label' in nodeData) json.label = nodeData.label;
   if ('fields' in nodeData) { // and params
     json.fields = {};
-    for (var field in nodeData.fields) {
-      var fieldData = nodeData.fields[field];
+    for (const field in nodeData.fields) {
+      const fieldData = nodeData.fields[field];
       switch (fieldData.type) {
-	case 'AudioBuffer':
-	  var wavBytes = encodeWav(fieldData.value);
+	case 'AudioBuffer': {
+	  const wavBytes = encodeWav(fieldData.value);
 	  json.fields[field] = base64js.fromByteArray(wavBytes);
 	  break;
+	}
 	default:
 	  json.fields[field] = fieldData.value;
       }
     }
     json.params = {};
-    for (var param in nodeData.params) {
+    for (const param in nodeData.params) {
       json.params[param] = {
 	value: nodeData.params[param].value,
 	automation: nodeData.params[param].automation.map(function(autoData) {
@@ -1273,7 +1279,7 @@ function nodeToJSON(nodeData) {
 
 function nodeFromJSON(json) {
   // make full nodeData, including subtree with fields and params, except don't add subtree to its parent yet, and keep children as just ID strings
-  var nodeData =
+  const nodeData =
     (json.type == 'AudioDestinationNode' ?
       tree.destination : makeChild(json.type));
   if ('label' in json) {
@@ -1281,14 +1287,14 @@ function nodeFromJSON(json) {
     nodeData.subtree.getElementsByClassName('label')[0].value = json.label;
   }
   if ('fields' in json) { // and params
-    for (var field in json.fields) {
+    for (const field in json.fields) {
       if (!(field in nodeData.fields)) {
 	console.warn('missing ' + json.type + '#' + field + ' field; skipping');
 	continue;
       }
-      var fieldData = nodeData.fields[field];
+      const fieldData = nodeData.fields[field];
       try {
-	var val = json.fields[field];
+	let val = json.fields[field];
 	switch (fieldData.type) {
 	  // TODO validate boolean, enum fields?
 	  case 'boolean':
@@ -1308,31 +1314,32 @@ function nodeFromJSON(json) {
 	  case 'PeriodicWave':
 	    if (val !== null) {
 	      fieldData.valueFn = makeValueFn(val, 'PeriodicWave');
-	      var buttonRow =
+	      const buttonRow =
 		fieldData.subtree.
 		getElementsByClassName('PeriodicWave-buttons')[0].
 		parentNode;
-	      var table = buttonRow.parentNode;
-	      var rowTemplate =
+	      const table = buttonRow.parentNode;
+	      const rowTemplate =
 		document.getElementById('PeriodicWave-row-template');
-	      for (var i = 0; i < val.length; i += 2) {
-		var newRow = cloneNoID(rowTemplate);
+	      for (let i = 0; i < val.length; i += 2) {
+		const newRow = cloneNoID(rowTemplate);
 		newRow.children[0].innerHTML = i/2;
 		table.insertBefore(newRow, buttonRow);
-		var inputs = newRow.getElementsByTagName('input');
+		const inputs = newRow.getElementsByTagName('input');
 		inputs[0].value = val[i];
 		inputs[1].value = val[i+1];
 	      }
-	      var select =
+	      const select =
 		nodeData.subtree.querySelector("select[name='type']");
 	      select.disabled = true;
 	    }
 	    break;
-	  case 'AudioBuffer':
-	    var arrayBuffer = Uint8Array.from(base64js.toByteArray(val)).buffer;
+	  case 'AudioBuffer': {
+	    const arrayBuffer = Uint8Array.from(base64js.toByteArray(val)).buffer;
 	    loadBuffer(fieldData.subtree, arrayBuffer, fieldData);
 	    val = fieldData.value;
 	    break;
+	  }
 	}
 	fieldData.value = val;
       } catch (ex) {
@@ -1340,13 +1347,13 @@ function nodeFromJSON(json) {
 	console.warn(ex);
       }
     }
-    for (var param in json.params) {
+    for (const param in json.params) {
       if (!(param in nodeData.params)) {
 	console.warn('missing ' + json.type + '#' + param + ' param; skipping');
 	continue;
       }
-      var paramData = nodeData.params[param];
-      var val = json.params[param].value;
+      const paramData = nodeData.params[param];
+      const val = json.params[param].value;
       try {
 	paramData.valueFn = makeValueFn(val);
 	paramData.value = val;
@@ -1357,13 +1364,13 @@ function nodeFromJSON(json) {
       }
       json.params[param].automation.forEach(function(a) {
 	addAutomation({ value: a.fn, parentNode: paramData.subtree });
-	var autoData = paramData.automation[paramData.automation.length - 1];
-	var argInputs = autoData.subtree.getElementsByClassName('value');
+	const autoData = paramData.automation[paramData.automation.length - 1];
+	const argInputs = autoData.subtree.getElementsByClassName('value');
 	if (argInputs.length != a.args.length) {
 	  console.warn('wrong number of arguments for automation ' + a.fn + '; expected ' + argInputs.length + ', but got ' + a.args.length);
 	}
-	for (var i = 0; i < argInputs.length && i < a.args.length; i++) {
-	  var val = a.args[i];
+	for (let i = 0; i < argInputs.length && i < a.args.length; i++) {
+	  const val = a.args[i];
 	  try {
 	    autoData.argFns[i] = makeValueFn(val);
 	    autoData.args[i] = val;
@@ -1382,7 +1389,7 @@ function nodeFromJSON(json) {
     nodeData.children = json.children; // for now; buildLoadedTree will finish
   }
   if ('value' in json) { // conditional
-    var val = json.value;
+    const val = json.value;
     try {
       nodeData.valueFn = makeValueFn(val, 'condition');
       nodeData.value = val;
@@ -1396,13 +1403,13 @@ function nodeFromJSON(json) {
 
 function buildLoadedTree(nodeData) {
   // recurse on params
-  for (var param in nodeData.params) {
+  for (const param in nodeData.params) {
     buildLoadedTree(nodeData.params[param]);
   }
   // replace child IDs with actual child tree data
   nodeData.children = nodeData.children.map(function(id) { return tree[id]; });
   // add child subtrees to this subtree's children, and recurse
-  var ul = nodeData.subtree.querySelector('.children');
+  const ul = nodeData.subtree.querySelector('.children');
   nodeData.children.forEach(function(childData) {
     ul.appendChild(childData.subtree);
     buildLoadedTree(childData);
@@ -1410,22 +1417,22 @@ function buildLoadedTree(nodeData) {
 }
 
 function saveTree() {
-  var json = {};
-  for (var label in tree) {
+  const json = {};
+  for (const label in tree) {
     // skip AudioParams, automation, and extra labels
     if ((!('type' in tree[label])) || tree[label].type == 'AudioParam' ||
         (tree[label].label == label && label != 'destination'))
       continue;
     json[label] = nodeToJSON(tree[label]);
   }
-  var jsonStr = JSON.stringify(json, null, 2);
-  var blob = new Blob([jsonStr], { type: 'application/json' });
+  const jsonStr = JSON.stringify(json, null, 2);
+  const blob = new Blob([jsonStr], { type: 'application/json' });
   saveBlob(blob, 'untitled.json'); // TODO use loaded filename if possible
 }
 
 function loadTree(jsonStr) {
   try {
-    var json = JSON.parse(jsonStr);
+    const json = JSON.parse(jsonStr);
     // clear tree (except destination)
     tree = {
       destination: {
@@ -1441,15 +1448,15 @@ function loadTree(jsonStr) {
     // make sure new IDs don't interfere with loaded ones
     // FIXME ID inflation
     nextID = 0;
-    for (var id in json) {
+    for (const id in json) {
       if (/^wat-node-\d+$/.test(id)) {
-	var idNum = parseInt(id.substring(9));
+	const idNum = parseInt(id.substring(9));
 	if (nextID <= idNum)
 	  nextID = idNum + 1;
       }
     }
     // fill tree nodes from JSON
-    for (var id in json) {
+    for (const id in json) {
       tree[id] = nodeFromJSON(json[id]);
       tree[id].subtree.id = id; // use the ID from JSON instead of the new one
       // add extra label
@@ -1467,8 +1474,8 @@ function loadTree(jsonStr) {
 }
 
 function loadTreeFromFile(input) {
-  var file = input.files[0];
-  var reader = new FileReader();
+  const file = input.files[0];
+  const reader = new FileReader();
   reader.onload = function(evt) {
     loadTree(reader.result);
   };
@@ -1476,7 +1483,7 @@ function loadTreeFromFile(input) {
 }
 
 function loadTreeFromURL(button) {
-  var input = button.previousElementSibling;
+  const input = button.previousElementSibling;
   fetch(input.value).then(function(response) {
     return response.text().then(loadTree);
   }).catch(function(err) {
@@ -1498,9 +1505,9 @@ function PlayingNote(noteNum, velocity, onset) {
     onset = ctx.currentTime;
   }
   // TODO make octave changeable
-  var fractionOfA440 = Math.pow(2.0, (noteNum - 69) / 12) * 2;
-  var frequency = fractionOfA440 * 440;
-  // NOTE: no release (r) var yet
+  const fractionOfA440 = Math.pow(2.0, (noteNum - 69) / 12) * 2;
+  const frequency = fractionOfA440 * 440;
+  // NOTE: no release (r) const yet
   this.vars = { n: noteNum, f: frequency, v: velocity, o: onset };
   this.audioNodes = {}; // by label
   this.scheduledNodes = []; // [audioNode, nodeData] pairs
@@ -1530,7 +1537,7 @@ function PlayingNote(noteNum, velocity, onset) {
 
   function instantiateNode(nodeData) {
     if (nodeData.type == 'reference') {
-      var that = this;
+      const that = this;
       return Promise.resolve({
 	connect: function(toNode) {
 	  that.referenceTasks.push(function() {
@@ -1559,10 +1566,10 @@ function PlayingNote(noteNum, velocity, onset) {
       }
     } else if (['if', 'elif', 'else'].includes(nodeData.type)) { // conditional
       // make a GainNode to represent this conditional node
-      var audioNode = ctx.createGain();
+      const audioNode = ctx.createGain();
       audioNode.gain.value = 1; // just in case the spec changes
       // find out whether we should instantiate the children
-      var val = false;
+      let val = false;
       switch (nodeData.type) {
 	case 'if':
 	  val = window.isPrevCondTrue = nodeData.valueFn(this.vars);
@@ -1578,7 +1585,7 @@ function PlayingNote(noteNum, velocity, onset) {
       // instantiate the children
       if (val) {
 	// save isPrevCondTrue
-	var oldIsPrevCondTrue = window.isPrevCondTrue;
+	const oldIsPrevCondTrue = window.isPrevCondTrue;
 	window.isPrevCondTrue = false; // no previous conds among children
 	nodeData.children.forEach(function(c) {
 	  this.instantiateNode(c).then((n) => { n.connect(audioNode); });
@@ -1588,8 +1595,8 @@ function PlayingNote(noteNum, velocity, onset) {
       }
       return Promise.resolve(audioNode);
     } else { // ordinary AudioNode
-      var typeData = nodeTypes[nodeData.type]
-      var audioNode = ctx[typeData.create]();
+      const typeData = nodeTypes[nodeData.type]
+      const audioNode = ctx[typeData.create]();
       if (nodeData.label != '') {
 	this.audioNodes[nodeData.label] = audioNode;
       }
@@ -1597,16 +1604,16 @@ function PlayingNote(noteNum, velocity, onset) {
 	this.scheduledNodes.push([audioNode, nodeData]);
       }
       if (nodeData.type == 'AnalyserNode') {
-	var grandkids = nodeData.subtree.getElementsByClassName('children')[0];
-	var freqCanvas =
+	const grandkids = nodeData.subtree.getElementsByClassName('children')[0];
+	const freqCanvas =
 	  grandkids.children[0].getElementsByTagName('canvas')[0];
-	var timeCanvas =
+	const timeCanvas =
 	  grandkids.children[1].getElementsByTagName('canvas')[0];
 	requestAnimationFrame(this.drawAnalysis.bind(this, freqCanvas, timeCanvas, audioNode));
       }
       // save isPrevCondTrue (so nested conditions don't leak out)
-      var oldIsPrevCondTrue = window.isPrevCondTrue;
-      for (var fieldName in nodeData.fields) {
+      const oldIsPrevCondTrue = window.isPrevCondTrue;
+      for (const fieldName in nodeData.fields) {
 	// don't set schedule here, and don't set type when a PeriodicWave has
 	// already been set (spec says that's an error)
 	if (!(/^st(art|op)When$/.test(fieldName) ||
@@ -1615,7 +1622,7 @@ function PlayingNote(noteNum, velocity, onset) {
 	  this.instantiateField(audioNode, fieldName, nodeData);
 	}
       }
-      for (var paramName in nodeData.params) {
+      for (const paramName in nodeData.params) {
 	this.instantiateParam(audioNode, paramName, nodeData);
       }
       window.isPrevCondTrue = false; // no previous conds among children
@@ -1629,10 +1636,10 @@ function PlayingNote(noteNum, velocity, onset) {
   },
 
   function instantiateField(audioNode, fieldName, nodeData) {
-    var field = nodeData.fields[fieldName];
+    const field = nodeData.fields[fieldName];
     if (field.value != '') {
       window.isPrevCondTrue = false;
-      var val = field.valueFn(this.vars);
+      const val = field.valueFn(this.vars);
       if ('set' in field) {
 	if (val !== null) {
 	  audioNode[field.set](val);
@@ -1644,8 +1651,8 @@ function PlayingNote(noteNum, velocity, onset) {
   },
 
   function instantiateParam(audioNode, paramName, nodeData) {
-    var paramData = nodeData.params[paramName];
-    var audioParam = audioNode[paramName];
+    const paramData = nodeData.params[paramName];
+    const audioParam = audioNode[paramName];
     if (paramData.value != '') {
       window.isPrevCondTrue = false;
       audioParam.value = paramData.valueFn(this.vars);
@@ -1655,7 +1662,7 @@ function PlayingNote(noteNum, velocity, onset) {
       // immediately
       // TODO? only schedule events that happen at onset immediately; do later events in setTimeout(fn,0) to avoid delaying calls to .start() (not sure how much this matters; probably happens internal to these automation methods anyway)
       if (a.args.some(function(arg) { return /\br\b/.test(arg); })) {
-	var that = this;
+	const that = this;
 	this.releaseTasks.push(function() {
 	  that.instantiateAutomation(audioParam, a);
 	});
@@ -1679,12 +1686,12 @@ function PlayingNote(noteNum, velocity, onset) {
   },
 
   function start() {
-    var that = this;
+    const that = this;
     this.scheduledNodes.forEach(function(pair) {
-      var [audioNode, nodeData] = pair;
+      const [audioNode, nodeData] = pair;
       // remove this pair from the list when the audioNode ends
       audioNode.onended = function() {
-	var i = that.scheduledNodes.indexOf(pair);
+	const i = that.scheduledNodes.indexOf(pair);
 	if (i >= 0) {
 	  that.scheduledNodes.splice(i, 1);
 	}
@@ -1745,34 +1752,34 @@ function PlayingNote(noteNum, velocity, onset) {
   },
 
   function drawFreqAnalysis(canvas, data) {
-    var gctx = canvas.getContext('2d');
-    var w = canvas.width;
-    var h = canvas.height;
+    const gctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
     // clear canvas to black
     gctx.fillStyle = 'black';
     gctx.fillRect(0, 0, w, h);
-    var binsPerCol = Math.max(1, Math.floor(data.length / w));
+    const binsPerCol = Math.max(1, Math.floor(data.length / w));
     gctx.fillStyle = 'lime';
-    for (var x = 0, i = 0; x < w && i < data.length; x++, i += binsPerCol) {
-      var sum = 0;
-      for (var j = 0; j < binsPerCol; j++) {
+    for (let x = 0, i = 0; x < w && i < data.length; x++, i += binsPerCol) {
+      let sum = 0;
+      for (let j = 0; j < binsPerCol; j++) {
 	sum += data[i+j];
       }
-      var y = Math.floor(sum / binsPerCol);
+      const y = Math.floor(sum / binsPerCol);
       gctx.fillRect(x, h - y, 1, y);
     }
   },
 
   function drawTimeAnalysis(canvas, data) {
-    var gctx = canvas.getContext('2d');
-    var w = canvas.width;
-    var h = canvas.height;
+    const gctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
     // clear canvas to black
     gctx.fillStyle = 'black';
     gctx.fillRect(0, 0, w, h);
     // trigger on positive 0-crossing (128-crossing?)
-    var pzc;
-    var prev = data[0];
+    let pzc;
+    let prev = data[0];
     for (pzc = 1; pzc < data.length; pzc++) {
       if (prev < 128 && data[pzc] >= 128)
 	break;
@@ -1782,12 +1789,12 @@ function PlayingNote(noteNum, velocity, onset) {
     if (pzc == data.length)
       pzc = 0;
     gctx.fillStyle = 'lime';
-    for (var x = 0, i = pzc; x < w && i < data.length; x++, i++) {
-      var y = data[i];
-      var y1 = Math.floor((data[i > 0 ? i-1 : i] + y) / 2);
-      var y2 = Math.floor((data[i < data.length - 1 ? i+1 : i] + y) / 2);
+    for (let x = 0, i = pzc; x < w && i < data.length; x++, i++) {
+      const y = data[i];
+      let y1 = Math.floor((data[i > 0 ? i-1 : i] + y) / 2);
+      let y2 = Math.floor((data[i < data.length - 1 ? i+1 : i] + y) / 2);
       if (y2 < y1) {
-	var tmp = y1;
+	let tmp = y1;
 	y1 = y2;
 	y2 = tmp;
       }
@@ -1796,10 +1803,10 @@ function PlayingNote(noteNum, velocity, onset) {
   },
 
   function drawAnalysis(freqCanvas, timeCanvas, analyserNode) {
-    var freqData = new Uint8Array(analyserNode.frequencyBinCount);
+    const freqData = new Uint8Array(analyserNode.frequencyBinCount);
     analyserNode.getByteFrequencyData(freqData);
     this.drawFreqAnalysis(freqCanvas, freqData);
-    var timeData = new Uint8Array(analyserNode.fftSize);
+    const timeData = new Uint8Array(analyserNode.fftSize);
     analyserNode.getByteTimeDomainData(timeData);
     this.drawTimeAnalysis(timeCanvas, timeData);
     if (!this.isEnded) {
@@ -1831,12 +1838,11 @@ function isAsciiKeyCode(code) {
   return ((code >= 48 && code <= 59) || (code >= 65 && code <= 90));
 }
 
-var tds = document.getElementsByTagName("td");
 document.querySelectorAll('table#keyboard td.w, table#keyboard td.b').
 forEach(function(td, i) {
-  var content = td.innerHTML;
+  const content = td.innerHTML;
   if (content.length == 1) {
-    var code = content.toUpperCase().charCodeAt(0);
+    const code = content.toUpperCase().charCodeAt(0);
     if (isAsciiKeyCode(code)) {
       td.setAttribute("id", "key_" + code);
     } else if (content == ',') {
@@ -1849,10 +1855,10 @@ forEach(function(td, i) {
   }
 });
 
-var kc2osc = {};
+const kc2osc = {};
 
 function standardKeyCode(evt) {
-  var code = evt.keyCode;
+  let code = evt.keyCode;
   if (code == 186) { // Firefox and Chrome can't agree on ";"
     code = 59;
   }
@@ -1863,12 +1869,12 @@ function standardKeyCode(evt) {
 
 document.body.onkeydown = function(evt) {
   if (document.activeElement.tagName != 'INPUT') {
-    var code = standardKeyCode(evt);
-    var td = document.getElementById("key_" + code);
+    const code = standardKeyCode(evt);
+    const td = document.getElementById("key_" + code);
     if (td) {
       //console.log('keydown ' + code);
       if (!kc2osc[code]) {
-	var noteNum = td.className.slice(0,2);
+	const noteNum = td.className.slice(0,2);
 	if (/\d\d/.test(noteNum)) {
 	  kc2osc[code] = new PlayingNote(noteNum);
 	}
@@ -1880,11 +1886,11 @@ document.body.onkeydown = function(evt) {
 };
 
 document.body.onkeyup = function(evt) {
-  var code = standardKeyCode(evt);
-  var td = document.getElementById("key_" + code);
+  const code = standardKeyCode(evt);
+  const td = document.getElementById("key_" + code);
   if (td) {
     //console.log('keyup ' + code);
-    var oscillator = kc2osc[code];
+    const oscillator = kc2osc[code];
     if (oscillator) {
       oscillator.release(ctx.currentTime);
       kc2osc[code] = null;
@@ -1896,14 +1902,14 @@ document.body.onkeyup = function(evt) {
 
 // activated by clicking on the on-screen keyboard
 
-var mouseOscillator;
-var mouseButtonIsDown;
+let mouseOscillator;
+let mouseButtonIsDown;
 
 keyboard.onmousedown = function(evt) {
   mouseButtonIsDown = true;
-  var td = evt.target;
+  const td = evt.target;
   if (td.matches('.b, .w')) {
-    var noteNum = evt.target.className.slice(0,2);
+    const noteNum = evt.target.className.slice(0,2);
     mouseOscillator = new PlayingNote(noteNum);
     mouseOscillator.onended =
       function () {
@@ -1926,7 +1932,7 @@ forEach(function(td) {
   td.onmouseenter = function(evt) {
     if (mouseButtonIsDown) {
       if (td.matches('.b, .w')) {
-	var noteNum = td.className.slice(0,2);
+	const noteNum = td.className.slice(0,2);
 	mouseOscillator = new PlayingNote(noteNum);
 	//console.log("enter " + mouseOscillator.vars.f);
 	mouseOscillator.onended =
@@ -1951,18 +1957,18 @@ forEach(function(td) {
 // activated by touching the touchboard
 
 function initTouchboard() {
-  var octaveTemplate = document.getElementById('octave-template');
-  var labelTemplate = octaveTemplate.children[0];
-  for (var oct = 0; oct < 10; oct++) {
-    var label = labelTemplate.cloneNode();
+  const octaveTemplate = document.getElementById('octave-template');
+  const labelTemplate = octaveTemplate.children[0];
+  for (let oct = 0; oct < 10; oct++) {
+    const label = labelTemplate.cloneNode();
     label.setAttribute('x', oct * 70);
     label.appendChild(document.createTextNode('C' + oct));
     touchboard.appendChild(label);
-    for (var k = 1; k <= 12; k++) {
-      var keyTemplate = octaveTemplate.children[k];
-      var key = keyTemplate.cloneNode();
-      var oldNoteNum = key.classList.item(0);
-      var newNoteNum = parseInt(oldNoteNum) + oct * 12;
+    for (let k = 1; k <= 12; k++) {
+      const keyTemplate = octaveTemplate.children[k];
+      const key = keyTemplate.cloneNode();
+      const oldNoteNum = key.classList.item(0);
+      const newNoteNum = parseInt(oldNoteNum) + oct * 12;
       key.classList.replace(oldNoteNum, newNoteNum);
       key.setAttribute('x', oct * 70 + parseFloat(key.getAttribute('x')));
       touchboard.appendChild(key);
@@ -1970,18 +1976,18 @@ function initTouchboard() {
   }
 }
 
-var touch2touched = {}; // map touch identifier to touched element
-var touchNote2osc = {}; // map MIDI note number to playing note started by touch
+const touch2touched = {}; // map touch identifier to touched element
+const touchNote2osc = {}; // map MIDI note number to playing note started by touch
 
 touchboard.ontouchstart = function(evt) {
   evt.preventDefault();
-  var touches = evt.changedTouches;
-  for (var i = 0; i < touches.length; i++) {
-    var touch = touches[i];
-    var touched = document.elementFromPoint(touch.clientX, touch.clientY);
+  const touches = evt.changedTouches;
+  for (let i = 0; i < touches.length; i++) {
+    const touch = touches[i];
+    const touched = document.elementFromPoint(touch.clientX, touch.clientY);
     touch2touched[touch.identifier] = touched;
     if (touched.matches('.b, .w') && !touched.matches('.keydown')) {
-      var noteNum = touched.classList.item(0);
+      const noteNum = touched.classList.item(0);
       touchNote2osc[noteNum] = new PlayingNote(noteNum);
       touchNote2osc[noteNum].onended =
         function() {
@@ -1994,19 +2000,19 @@ touchboard.ontouchstart = function(evt) {
 
 touchboard.ontouchmove = function(evt) {
   evt.preventDefault();
-  var touches = evt.changedTouches;
-  for (var i = 0; i < touches.length; i++) {
-    var touch = touches[i];
-    var oldTouched = touch2touched[touch.identifier];
-    var newTouched = document.elementFromPoint(touch.clientX, touch.clientY);
+  const touches = evt.changedTouches;
+  for (let i = 0; i < touches.length; i++) {
+    const touch = touches[i];
+    const oldTouched = touch2touched[touch.identifier];
+    const newTouched = document.elementFromPoint(touch.clientX, touch.clientY);
     // TODO pan/zoom if two touches on non-key area
     if (newTouched == oldTouched) continue; // no real change
     touch2touched[touch.identifier] = newTouched;
     // stop old touched note if any
     // TODO? check if any other touches are still holding it down
     if (oldTouched !== undefined) {
-      var oldNoteNum = oldTouched.classList.item(0);
-      var oldOsc = touchNote2osc[oldNoteNum];
+      const oldNoteNum = oldTouched.classList.item(0);
+      const oldOsc = touchNote2osc[oldNoteNum];
       if (oldOsc !== undefined) {
 	oldOsc.release(ctx.currentTime);
 	delete touchNote2osc[oldNoteNum];
@@ -2015,7 +2021,7 @@ touchboard.ontouchmove = function(evt) {
     // start new touched note
     if (newTouched.matches('.b, .w') && !newTouched.matches('.keydown')) {
       newNoteNum = newTouched.classList.item(0);
-      var newOsc = new PlayingNote(newNoteNum);
+      const newOsc = new PlayingNote(newNoteNum);
       touchNote2osc[newNoteNum] = newOsc;
       newOsc.onended =
 	function() {
@@ -2028,13 +2034,13 @@ touchboard.ontouchmove = function(evt) {
 
 touchboard.ontouchend = function(evt) {
   evt.preventDefault();
-  var touches = evt.changedTouches;
-  for (var i = 0; i < touches.length; i++) {
-    var touch = touches[i];
-    var touched = touch2touched[touch.identifier];
+  const touches = evt.changedTouches;
+  for (let i = 0; i < touches.length; i++) {
+    const touch = touches[i];
+    const touched = touch2touched[touch.identifier];
     // TODO? check if any other touches are still holding it down
     if (touched !== undefined) {
-      var noteNum = touched.classList.item(0);
+      const noteNum = touched.classList.item(0);
       if (noteNum in touchNote2osc) {
 	touchNote2osc[noteNum].release(ctx.currentTime);
 	delete touchNote2osc[noteNum];

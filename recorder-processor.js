@@ -13,7 +13,7 @@ class RecorderProcessor extends AudioWorkletProcessor {
   process(inputs, outputs /*, parameters */) {
     // double the size of this.samples when we run out of room
     if (this.samples.length < this.numSamples + inputs[0][0].length) {
-      var newSamples = new Float32Array(this.samples.length * 2);
+      const newSamples = new Float32Array(this.samples.length * 2);
       newSamples.set(this.samples);
       this.samples = newSamples;
     }
