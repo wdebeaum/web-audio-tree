@@ -14,11 +14,11 @@ const WebSocketServer = require('websocket').server;
 
 const dev = '/dev/snd/midiC0D0';
 
-const server = http.createServer(function(request, response) {
+const server = http.createServer((request, response) => {
   response.writeHead(404);
   response.end();
 });
-server.listen(22468, function() {
+server.listen(22468, () => {
   console.log('listening');
 });
 
@@ -31,7 +31,7 @@ const buffer = Buffer.alloc(3);
 
 function eachMessage(fd, cb, pos) {
   if (pos === undefined) { pos = 0; }
-  fs.read(fd, buffer, pos, 3 - pos, null, function(err, bytesRead, buf) {
+  fs.read(fd, buffer, pos, 3 - pos, null, (err, bytesRead, buf) => {
     pos += bytesRead;
     if (err) {
       console.log('read from ' + dev + ' failed');
@@ -44,7 +44,7 @@ function eachMessage(fd, cb, pos) {
   });
 }
 
-wsServer.on('request', function(request) {
+wsServer.on('request', (request) => {
   console.log('received ws request');
   if (request.origin != 'http://localhost:11235') {
     request.reject();
@@ -53,12 +53,12 @@ wsServer.on('request', function(request) {
   }
   const connection = request.accept('midi', request.origin);
   console.log('accepted ws connection');
-  fs.open(dev, 'r', function(err, fd) {
-    eachMessage(fd, function(buf) {
+  fs.open(dev, 'r', (err, fd) => {
+    eachMessage(fd, buf => {
       //connection.sendBytes(Buffer.from(buf)); // doesn't work :(
       connection.sendUTF(JSON.stringify(Array.from(buf)));
     });
-    connection.on('close', function(reasonCode, description) {
+    connection.on('close', (reasonCode, description) => {
       console.log('closed ws connection');
     });
   });

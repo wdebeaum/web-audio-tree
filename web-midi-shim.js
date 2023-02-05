@@ -7,19 +7,21 @@ wms.src='web-midi-shim.js';
 document.body.appendChild(wms);
 */
 
-function MIDIPort() { // eslint-disable-line no-redeclare
-  this.socket = new WebSocket('ws://localhost:22468', 'midi');
-  const that = this;
-  this.socket.addEventListener('message', function(evt) {
-    if ('function' == typeof that.onmidimessage) {
-      that.onmidimessage({ data: JSON.parse(evt.data) });
-    }
-  });
+class MIDIPort extends EventTarget { // eslint-disable-line no-redeclare
+  constructor() {
+    super();
+    this.socket = new WebSocket('ws://localhost:22468', 'midi');
+    this.socket.addEventListener('message', evt => {
+      const msg = new Event('midimessage');
+      msg.data = JSON.parse(evt.data);
+      this.dispatchEvent(msg);
+    });
+  }
 }
 
 navigator.requestMIDIAccess = function(opts) {
   return {
-    then: function(cb) {
+    then: cb => {
       const port = new MIDIPort();
       cb({ inputs: [port] });
     }
