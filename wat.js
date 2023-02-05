@@ -261,7 +261,14 @@ function initWebAudio() {
   document.getElementById('web-audio-status').classList.replace('unknown', 'supported');
 }
 
-const note2osc = {};
+// is the midi sustain pedal pressed down?
+let midiSustainOn = false;
+// which keys (note number strings) on the midi keyboard are currently held
+// down? (those that continue playing because the sustain pedal is down don't
+// count)
+const midiNotesHeld = new Set();
+// map midi note number string to PlayingNote instance
+const midiNote2osc = {};
 
 function handleMIDIMessage(evt) {
   try {
@@ -273,15 +280,25 @@ function handleMIDIMessage(evt) {
       if (cmd == 8 || // note off
 	  (cmd == 9 && velocity == 0)) { // note on with vel 0 (i.e. off)
 	//console.log({ note: 'off', num: noteNum });
-	if (note2osc[noteNum]) {
-	  note2osc[noteNum].release(ctx.currentTime);
-	}
+	midiNotesHeld.delete(''+noteNum);
+	if (midiNote2osc[noteNum] && !midiSustainOn)
+	  midiNote2osc[noteNum].release(ctx.currentTime);
       } else if (cmd == 9) { // note on
 	//console.log({ note: 'on', num: noteNum, vel: velocity });
-	if (note2osc[noteNum]) {
-	  note2osc[noteNum].end();
+	midiNotesHeld.add(''+noteNum);
+	if (midiNote2osc[noteNum])
+	  midiNote2osc[noteNum].end();
+	midiNote2osc[noteNum] = new PlayingNote(noteNum, velocity);
+      } else if (cmd == 0xb && noteNum == 0x40) { // sustain pedal
+        //console.log({ sustain: velocity });
+        if (velocity) { // on
+	  midiSustainOn = true;
+	} else { // off
+	  midiSustainOn = false;
+	  for (const noteNum in midiNote2osc)
+	    if (!midiNotesHeld.has(noteNum))
+	      midiNote2osc[noteNum].release(ctx.currentTime);
 	}
-	note2osc[noteNum] = new PlayingNote(noteNum, velocity);
       }
     }
   } catch (e) {
