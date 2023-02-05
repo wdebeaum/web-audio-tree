@@ -1509,46 +1509,45 @@ function loadTreeFromURL(button) {
  * Playing note
  */
 
-function PlayingNote(noteNum, velocity, onset) {
-  //console.log('playing note ' + noteNum);
-  if (velocity === undefined) {
-    velocity = 1;
-  }
-  if (onset === undefined) {
-    onset = ctx.currentTime;
-  }
-  // TODO make octave changeable
-  const fractionOfA440 = Math.pow(2.0, (noteNum - 69) / 12) * 2;
-  const frequency = fractionOfA440 * 440;
-  // NOTE: no release (r) const yet
-  this.vars = { n: noteNum, f: frequency, v: velocity, o: onset };
-  this.audioNodes = {}; // by label
-  this.scheduledNodes = []; // [audioNode, nodeData] pairs
-  this.referenceTasks = []; // functions to be called to connect references
-  this.releaseTasks = []; // functions to be called when we know release time
-  this.isEnded = false;
-  this.topNodes = [];
-  // instantiate and connect each child of the destination node (their children
-  // in turn might get instantiated in promises)
-  tree.destination.children.forEach((c) => {
-    this.instantiateNode(c).then((n) => {
-      if (!this.isEnded) {
-	this.topNodes.push(n);
-	n.connect(ctx.destination);
-      }
+class PlayingNote {
+  constructor(noteNum, velocity, onset) {
+    //console.log('playing note ' + noteNum);
+    if (velocity === undefined) {
+      velocity = 1;
+    }
+    if (onset === undefined) {
+      onset = ctx.currentTime;
+    }
+    // TODO make octave changeable
+    const fractionOfA440 = Math.pow(2.0, (noteNum - 69) / 12) * 2;
+    const frequency = fractionOfA440 * 440;
+    // NOTE: no release (r) const yet
+    this.vars = { n: noteNum, f: frequency, v: velocity, o: onset };
+    this.audioNodes = {}; // by label
+    this.scheduledNodes = []; // [audioNode, nodeData] pairs
+    this.referenceTasks = []; // functions to be called to connect references
+    this.releaseTasks = []; // functions to be called when we know release time
+    this.isEnded = false;
+    this.topNodes = [];
+    // instantiate and connect each child of the destination node (their
+    // children in turn might get instantiated in promises)
+    tree.destination.children.forEach((c) => {
+      this.instantiateNode(c).then((n) => {
+	if (!this.isEnded) {
+	  this.topNodes.push(n);
+	  n.connect(ctx.destination);
+	}
+      });
     });
-  });
-  // wait for everything to be instantiated before connecting references and
-  // starting sources
-  setTimeout(() => {
-    this.referenceTasks.forEach(function(fn) { fn(); });
-    this.start();
-  }, 0);
-}
+    // wait for everything to be instantiated before connecting references and
+    // starting sources
+    setTimeout(() => {
+      this.referenceTasks.forEach(function(fn) { fn(); });
+      this.start();
+    }, 0);
+  }
 
-[ // begin PlayingNote methods
-
-  function instantiateNode(nodeData) {
+  instantiateNode(nodeData) {
     if (nodeData.type == 'reference') {
       const that = this;
       return Promise.resolve({
@@ -1648,9 +1647,9 @@ function PlayingNote(noteNum, velocity, onset) {
       window.isPrevCondTrue = oldIsPrevCondTrue;
       return Promise.resolve(audioNode);
     }
-  },
+  }
 
-  function instantiateField(audioNode, fieldName, nodeData) {
+  instantiateField(audioNode, fieldName, nodeData) {
     const field = nodeData.fields[fieldName];
     if (field.value != '') {
       window.isPrevCondTrue = false;
@@ -1663,9 +1662,9 @@ function PlayingNote(noteNum, velocity, onset) {
 	audioNode[fieldName] = val;
       }
     }
-  },
+  }
 
-  function instantiateParam(audioNode, paramName, nodeData) {
+  instantiateParam(audioNode, paramName, nodeData) {
     const paramData = nodeData.params[paramName];
     const audioParam = audioNode[paramName];
     if (paramData.value != '') {
@@ -1689,18 +1688,18 @@ function PlayingNote(noteNum, velocity, onset) {
     paramData.children.forEach(function(c) {
       this.instantiateNode(c).then((n) => { n.connect(audioParam); });
     }, this);
-  },
+  }
 
-  function instantiateAutomation(audioParam, autoData) {
+  instantiateAutomation(audioParam, autoData) {
     audioParam[autoData.fn].apply(audioParam,
       autoData.argFns.map(function(fn) {
 	window.isPrevCondTrue = false;
 	return fn(this.vars);
       }, this)
     );
-  },
+  }
 
-  function start() {
+  start() {
     const that = this;
     this.scheduledNodes.forEach(function(pair) {
       const [audioNode, nodeData] = pair;
@@ -1732,9 +1731,9 @@ function PlayingNote(noteNum, velocity, onset) {
 	that.instantiateField(audioNode, 'stopWhen', nodeData);
       }
     });
-  },
+  }
 
-  function release(releaseTime) {
+  release(releaseTime) {
     //console.log('releasing note ' + this.vars.n);
     this.vars.r = releaseTime;
     this.releaseTasks.forEach(function(fn) { fn(); });
@@ -1743,9 +1742,9 @@ function PlayingNote(noteNum, velocity, onset) {
       // and end() hasn't been called yet, so we must call end() ourselves
       this.end();
     }
-  },
+  }
 
-  function end() {
+  end() {
     //console.log('ending note ' + this.vars.n);
     this.isEnded = true;
     // try to stop any stragglers
@@ -1764,9 +1763,9 @@ function PlayingNote(noteNum, velocity, onset) {
     if ('function' == typeof this.onended) {
       this.onended();
     }
-  },
+  }
 
-  function drawFreqAnalysis(canvas, data) {
+  drawFreqAnalysis(canvas, data) {
     const gctx = canvas.getContext('2d');
     const w = canvas.width;
     const h = canvas.height;
@@ -1783,9 +1782,9 @@ function PlayingNote(noteNum, velocity, onset) {
       const y = Math.floor(sum / binsPerCol);
       gctx.fillRect(x, h - y, 1, y);
     }
-  },
+  }
 
-  function drawTimeAnalysis(canvas, data) {
+  drawTimeAnalysis(canvas, data) {
     const gctx = canvas.getContext('2d');
     const w = canvas.width;
     const h = canvas.height;
@@ -1815,9 +1814,9 @@ function PlayingNote(noteNum, velocity, onset) {
       }
       gctx.fillRect(x, h - 1 - y2, 1, y2 - y1 + 1);
     }
-  },
+  }
 
-  function drawAnalysis(freqCanvas, timeCanvas, analyserNode) {
+  drawAnalysis(freqCanvas, timeCanvas, analyserNode) {
     const freqData = new Uint8Array(analyserNode.frequencyBinCount);
     analyserNode.getByteFrequencyData(freqData);
     this.drawFreqAnalysis(freqCanvas, freqData);
@@ -1830,8 +1829,7 @@ function PlayingNote(noteNum, velocity, onset) {
       );
     }
   }
-
-].forEach(function(fn) { PlayingNote.prototype[fn.name] = fn; });
+}
 
 /*
  * Keyboard
