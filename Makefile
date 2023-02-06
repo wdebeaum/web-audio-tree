@@ -15,13 +15,13 @@ base64js.min.js: node_modules/base64-js/package.json
 
 doc: README.html
 
-README.html: md2html.rb README.md
+README.html: md2html.sh README.md
 	if ./$+ >$@ ; \
 	then true ; \
 	else \
 	  rm -f $@ ; \
 	  echo ; \
-	  echo "Making README.html failed, but that's OK, everything else will still work. If you really want README.html, make sure you have Ruby and the github-markup gem installed." ; \
+	  echo "Making README.html failed, but that's OK, everything else will still work. If you really want README.html, make sure you have commonmarker installed." ; \
 	fi
 
 midi-workaround: node_modules/websocket/package.json simple-tree/simple-tree.js
