@@ -2012,6 +2012,9 @@ touchboard.addEventListener('touchstart', evt => {
     touch2touched[touch.identifier] = touched;
     if (touched.matches('.b, .w') && !touched.matches('.keydown')) {
       const noteNum = touched.classList.item(0);
+      const oldOsc = touchNote2osc[noteNum];
+      if (oldOsc)
+	oldOsc.end();
       touchNote2osc[noteNum] = new PlayingNote(noteNum);
       touchNote2osc[noteNum].addEventListener('ended', () => {
 	touched.classList.remove('keydown');
@@ -2029,21 +2032,27 @@ touchboard.addEventListener('touchmove', evt => {
     const oldTouched = touch2touched[touch.identifier];
     const newTouched = document.elementFromPoint(touch.clientX, touch.clientY);
     // TODO pan/zoom if two touches on non-key area
-    if (newTouched == oldTouched) continue; // no real change
+    if (newTouched === oldTouched) continue; // no real change
     touch2touched[touch.identifier] = newTouched;
     // stop old touched note if any
     // TODO? check if any other touches are still holding it down
-    if (oldTouched !== undefined) {
+    if (oldTouched) {
       const oldNoteNum = oldTouched.classList.item(0);
-      const oldOsc = touchNote2osc[oldNoteNum];
-      if (oldOsc !== undefined) {
-	oldOsc.release(ctx.currentTime);
-	delete touchNote2osc[oldNoteNum];
-      }
+      setTimeout(() => {
+	const oldOsc = touchNote2osc[oldNoteNum];
+	if (oldOsc) {
+	  oldOsc.release(ctx.currentTime);
+	  delete touchNote2osc[oldNoteNum];
+	}
+      }, 0);
     }
     // start new touched note
-    if (newTouched.matches('.b, .w') && !newTouched.matches('.keydown')) {
+    if (newTouched &&
+	newTouched.matches('.b, .w') && !newTouched.matches('.keydown')) {
       const newNoteNum = newTouched.classList.item(0);
+      const oldOsc = touchNote2osc[newNoteNum];
+      if (oldOsc)
+	oldOsc.end();
       const newOsc = new PlayingNote(newNoteNum);
       touchNote2osc[newNoteNum] = newOsc;
       newOsc.addEventListener('ended', () => {
@@ -2061,12 +2070,14 @@ function handleTouchEnd(evt) {
     const touch = touches[i];
     const touched = touch2touched[touch.identifier];
     // TODO? check if any other touches are still holding it down
-    if (touched !== undefined) {
+    if (touched) {
       const noteNum = touched.classList.item(0);
-      if (noteNum in touchNote2osc) {
-	touchNote2osc[noteNum].release(ctx.currentTime);
-	delete touchNote2osc[noteNum];
-      }
+      setTimeout(() => {
+	if (noteNum in touchNote2osc) {
+	  touchNote2osc[noteNum].release(ctx.currentTime);
+	  delete touchNote2osc[noteNum];
+	}
+      }, 0);
     }
   }
 }
