@@ -41,7 +41,7 @@ let tree = { // map IDs to data structures
 };
 let nextID = 0;
 function getNextID() {
-  return 'wat-node-' + (nextID++);
+  return `wat-node-${nextID++}`;
 }
 
 // clone the given template node, but give it a new id attribute
@@ -65,16 +65,14 @@ function initWebAudio() {
     return;
   }
   // fake BaseAudioContext if it's missing
-  if (!('BaseAudioContext' in window)) {
+  if (!('BaseAudioContext' in window))
     window.BaseAudioContext = window.AudioContext;
-  }
   // fake AudioScheduledSourceNode if it's missing
   if (!('AudioScheduledSourceNode' in window)) {
     window.AudioScheduledSourceNode = function() {};
     window.AudioScheduledSourceNode.prototype = { isFake: true };
-    'onended start stop connect disconnect context numberOfInputs numberOfOutputs channelCount channelCountMode channelInterpretation playbackState UNSCHEDULED_STATE SCHEDULED_STATE PLAYING_STATE FINISHED_STATE'.split(/ /).forEach((k) => {
+    for (const k of 'onended start stop connect disconnect context numberOfInputs numberOfOutputs channelCount channelCountMode channelInterpretation playbackState UNSCHEDULED_STATE SCHEDULED_STATE PLAYING_STATE FINISHED_STATE'.split(/ /))
       window.AudioScheduledSourceNode.prototype[k] = null;
-    });
   }
 
   ctx = new AudioContext({ latencyHint: 'interactive' });
@@ -82,23 +80,23 @@ function initWebAudio() {
   // fill nodeTypes by inspecting BaseAudioContext and example nodes created
   // using ctx
   for (const k in BaseAudioContext.prototype) {
-    if (k == 'createScriptProcessor') { continue; } // deprecated
+    if (k == 'createScriptProcessor') continue; // deprecated
     if (/^create/.test(k)) {
       const v = BaseAudioContext.prototype[k];
       if (('function' == typeof v) && v.length == 0) {
 	// found a method of BaseAudioContext taking no arguments, whose name
 	// starts with 'create'. guess it will create a type of node!
-	let typeName = k.replace(/^create/,'') + 'Node';
+	let typeName = `${k.replace(/^create/,'')}Node`;
 	// if not, try prepending 'Audio'
-	if (!Object.prototype.isPrototypeOf.call(AudioNode, window[typeName])) {
-	  typeName = 'Audio' + typeName;
-	}
+	if (!Object.prototype.isPrototypeOf.call(AudioNode, window[typeName]))
+	  typeName = `Audio${typeName}`;
 	// if we have the name of an AudioNode subtype
 	if (Object.prototype.isPrototypeOf.call(AudioNode, window[typeName])) {
 	  // try making an example instance
 	  const example = ctx[k]();
 	  // if it's not an instance, skip it
-	  if (!(example instanceof window[typeName])) { continue; }
+	  if (!(example instanceof window[typeName]))
+	    continue;
 	  // if it is, make an entry in nodeTypes
 	  nodeTypes[typeName] = {
 	    create: k,
@@ -132,7 +130,7 @@ function initWebAudio() {
 	    } else if ('function' == typeof example[param]) {
 	      if (/^set/.test(param)) {
 		const paramTypeName = param.substring(3);
-		const paramCreate = 'create' + paramTypeName;
+		const paramCreate = `create${paramTypeName}`;
 		if (example[param].length == 1 &&
 		    ('function' == typeof window[paramTypeName]) &&
 		    (paramCreate in BaseAudioContext.prototype) &&
@@ -140,7 +138,7 @@ function initWebAudio() {
 		       typeof BaseAudioContext.prototype[paramCreate])) {
 		  const numArgs=BaseAudioContext.prototype[paramCreate].length;
 		  const args = new Array(numArgs).fill('?').join(', ');
-		  console.log(typeName + '#' + param + '(' + paramCreate + '(' + args + '))');
+		  console.log(`${typeName}#${param}(${paramCreate}(${args}))`);
 		  nodeTypes[typeName].fields[paramTypeName] = {
 		    type: paramTypeName,
 		    defaultValue: null,
@@ -150,20 +148,19 @@ function initWebAudio() {
 		} else {
 		  const numArgs = example[param].length;
 		  const args = new Array(numArgs).fill('?').join(', ');
-		  console.log(typeName + '#' + param + '(' + args + ')');
+		  console.log(`${typeName}#${param}(${args})`);
 		  // meh
 		}
 	      } // else ignore non-setter functions
 	    } else {
 	      let paramType = typeof example[param];
 	      if (paramType == 'object') {
-		if (example[param] !== null) {
+		if (example[param] !== null)
 		  paramType = example[param].constructor.name;
-		} else if (param == 'buffer') {
+		else if (param == 'buffer')
 		  paramType = 'AudioBuffer';
-		} else if (param == 'curve') {
+		else if (param == 'curve')
 		  paramType = 'Float32Array';
-		}
 	      } else if (paramType == 'string') {
 		paramType = 'enum';
 	      }
@@ -171,42 +168,40 @@ function initWebAudio() {
 	      if ((typeName == 'AnalyserNode' &&
 		   param == 'frequencyBinCount') ||
 		  (typeName == 'DynamicsCompressorNode' &&
-		   param == 'reduction')) {
+		   param == 'reduction'))
 		continue;
-	      }
 	      let values;
 	      if (paramType == 'enum') {
-		switch (typeName + '#' + param) {
+		switch (`${typeName}#${param}`) {
 		  case 'BiquadFilterNode#type':
-		    values = ["lowpass", "highpass", "bandpass", "lowshelf", "highshelf", "peaking", "notch", "allpass"];
+		    values = 'lowpass highpass bandpass lowshelf highshelf peaking notch allpass'.split(' ');
 		    break;
 		  case 'OscillatorNode#type':
-		    values = ["sine", "square", "sawtooth", "triangle", "custom"];
+		    values = 'sine square sawtooth triangle custom'.split(' ');
 		    break;
 		  case 'AudioPannerNode#panningModel':
 		  case 'PannerNode#panningModel':
-		    values = ["equalpower", "HRTF"];
+		    values = 'equalpower HRTF'.split(' ');
 		    break;
 		  case 'AudioPannerNode#distanceModel':
 		  case 'PannerNode#distanceModel':
-		    values = ["linear", "inverse", "exponential"];
+		    values = 'linear inverse exponential'.split(' ');
 		    break;
 		  case 'WaveShaperNode#oversample':
-		    values = ["none", "2x", "4x"];
+		    values = 'none 2x 4x'.split(' ');
 		    break;
 		  default:
-		    console.error('unknown enum: ' + typeName + '#' + param);
+		    console.error(`unknown enum: ${typeName}#${param}`);
 		    continue;
 		}
 	      }
-	      console.log(typeName + '#' + param + ' : ' + JSON.stringify(paramType));
+	      console.log(`${typeName}#${param} : ${JSON.stringify(paramType)}`);
 	      nodeTypes[typeName].fields[param] = {
 		type: paramType,
 		defaultValue: example[param]
 	      };
-	      if (paramType == 'enum') {
+	      if (paramType == 'enum')
 		nodeTypes[typeName].fields[param].values = values;
-	      }
 	    }
 	  }
 	}
@@ -249,7 +244,7 @@ function initWebAudio() {
   if ('RecorderNode' in window) {
     RecorderNode.addModule(ctx).
     then(() => { console.log('added RecorderNode to ctx'); }).
-    catch((err) => {
+    catch(err => {
       console.log(err.message);
       console.log(err.stack);
       console.log(JSON.stringify(err));
@@ -388,7 +383,7 @@ function makeChild(typeName) {
     children: []
   };
   if (['reference', 'microphone'].includes(typeName)) {
-    newChild = cloneNewID(document.getElementById(typeName + '-template'));
+    newChild = cloneNewID(document.getElementById(`${typeName}-template`));
   } else if (['if','elif','else'].includes(typeName)) {
     newChild = cloneNewID(document.getElementById('audio-node-template'));
     newChild.firstChild.innerHTML = typeName;
@@ -446,7 +441,7 @@ function makeChild(typeName) {
     const fieldNames = Object.keys(fields).sort();
     for (const name of fieldNames) {
       const type = fields[name].type;
-      const fieldTemplate = document.getElementById(type + '-field-template');
+      const fieldTemplate = document.getElementById(`${type}-field-template`);
       const field = cloneNewID(fieldTemplate);
       data.fields[name] = {
 	type: type,
@@ -454,19 +449,16 @@ function makeChild(typeName) {
 	valueFn: function() { return this.value; },
 	subtree: field
       };
-      if ('set' in nodeTypes[typeName].fields[name]) {
+      if ('set' in nodeTypes[typeName].fields[name])
 	data.fields[name].set = nodeTypes[typeName].fields[name].set;
-      }
-      if (type != 'PeriodicWave') {
-	field.querySelector('span.node').innerHTML = type + ' ' + name + ' = ';
-      }
+      if (type != 'PeriodicWave')
+	field.querySelector('span.node').innerHTML = `${type} ${name} = `;
       switch (type) {
 	case 'boolean': {
 	  const input = field.querySelector('input');
 	  input.name = name;
-	  if (fields[name].defaultValue) {
+	  if (fields[name].defaultValue)
 	    input.setAttribute('checked', 'checked');
-	  }
 	  break;
 	}
 	case 'number': {
@@ -480,15 +472,13 @@ function makeChild(typeName) {
 	  select.name = name;
 	  for (const v of fields[name].values) {
 	    const option = document.createElement('option');
-	    if (v == fields[name].defaultValue) {
+	    if (v == fields[name].defaultValue)
 	      option.setAttribute('selected', 'selected');
-	    }
 	    if (typeName == 'OscillatorNode' &&
-	        name == 'type' && v == 'custom') {
+	        name == 'type' && v == 'custom')
 	      // not allowed to directly set OscillatorNode#type='custom'; must
 	      // setPeriodicWave instead
 	      option.setAttribute('disabled', 'disabled');
-	    }
 	    option.innerHTML = v;
 	    select.appendChild(option);
 	  }
@@ -514,18 +504,17 @@ function makeChild(typeName) {
     // sort parameter names k-rate before a-rate, and then alphabetically
     const paramNames = Object.keys(params).sort((a,b) => {
       if (params[a].automationRate == 'k-rate' &&
-	  params[b].automationRate == 'a-rate') {
+	  params[b].automationRate == 'a-rate')
 	return -1;
-      } else if (params[a].automationRate == 'a-rate' &&
-		 params[b].automationRate == 'k-rate') {
+      else if (params[a].automationRate == 'a-rate' &&
+	       params[b].automationRate == 'k-rate')
 	return 1;
-      } else if (a < b) {
+      else if (a < b)
 	return -1;
-      } else if (a > b) {
+      else if (a > b)
 	return 1;
-      } else {
+      else
 	return 0;
-      }
     });
     for (const name of paramNames) {
       const param = cloneNewID(paramTemplate);
@@ -539,14 +528,14 @@ function makeChild(typeName) {
       };
       tree[param.id] = paramData;
       data.params[name] = paramData;
-      param.firstChild.innerHTML = 'AudioParam ' + name + ' = ';
+      param.firstChild.innerHTML = `AudioParam ${name} = `;
       param.classList.add(params[name].automationRate);
       param.getElementsByClassName('value')[0].value =
         params[name].defaultValue;
       grandkids.appendChild(param);
     }
   } else {
-    console.error("bogus add-child value " + typeName);
+    console.error(`bogus add-child value ${typeName}`);
     return;
   }
   data.subtree = newChild;
@@ -554,20 +543,15 @@ function makeChild(typeName) {
 }
 
 function getDescendantLabels(nodeData, labels) {
-  if (!labels) {
+  if (!labels)
     labels = [];
-  }
-  if (nodeData.type != 'reference' && nodeData.label != '') {
+  if (nodeData.type != 'reference' && nodeData.label != '')
     labels.push(nodeData.label);
-  }
-  for (const name in nodeData.params) {
-    for (const child of nodeData.params[name].children) {
+  for (const name in nodeData.params)
+    for (const child of nodeData.params[name].children)
       getDescendantLabels(child, labels);
-    }
-  }
-  for (const child of nodeData.children) {
+  for (const child of nodeData.children)
     getDescendantLabels(child, labels);
-  }
   return labels;
 }
 
@@ -587,13 +571,13 @@ function isDescendant(ancestorID, descendantID) {
 // elsewhere, in preparation for removing the node
 function moveReferencedDescendants(nodeData) {
   const labels = getDescendantLabels(nodeData);
-  console.log('descendant labels: ' + labels.join(', '));
+  console.log(`descendant labels: ${labels.join(', ')}`);
   for (const id in tree) {
     const refNodeData = tree[id];
     if (refNodeData.type == 'reference') {
-      console.log('reference ' + id + ' has label ' + refNodeData.label);
+      console.log(`reference ${id} has label ${refNodeData.label}`);
       const labelIndex = labels.indexOf(refNodeData.label);
-      console.log('labelIndex = ' + labelIndex);
+      console.log(`labelIndex = ${labelIndex}`);
       if (labelIndex >= 0 &&
 	  labels.includes(refNodeData.label) &&
 	  !isDescendant(nodeData.subtree.id, id)) {
@@ -607,46 +591,37 @@ function moveReferencedDescendants(nodeData) {
 
 // delete all the nodes in the subtree from tree
 function deleteSubtree(nodeData) {
-  if ('children' in nodeData) {
+  if ('children' in nodeData)
     nodeData.children.forEach(deleteSubtree);
-  }
-  if ('params' in nodeData) {
-    for (const name in nodeData.params) {
+  if ('params' in nodeData)
+    for (const name in nodeData.params)
       deleteSubtree(nodeData.params[name]);
-    }
-  }
-  if ('automation' in nodeData) {
+  if ('automation' in nodeData)
     nodeData.automation.forEach(deleteSubtree);
-  }
-  if ('subtree' in nodeData) {
+  if ('subtree' in nodeData)
     delete tree[nodeData.subtree.id];
-  }
   if (nodeData.type != 'reference' &&
-      nodeData.label != '') {
+      nodeData.label != '')
     delete tree[nodeData.label];
-  }
 }
 
 /* exported deleteChild */
 function deleteChild(childSubtree) {
   let removeFromList;
-  if (childSubtree.matches('.audio-node')) {
+  if (childSubtree.matches('.audio-node'))
     removeFromList = 'children';
-  } else if (childSubtree.matches('.automation')) {
+  else if (childSubtree.matches('.automation'))
     removeFromList = 'automation';
-  }
   if (childSubtree.id && (childSubtree.id in tree)) {
     const childData = tree[childSubtree.id];
-    if (removeFromList == 'children') { // automation can't have descendants
+    if (removeFromList == 'children') // automation can't have descendants
       moveReferencedDescendants(childData);
-    }
     deleteSubtree(childData);
     if (removeFromList) {
       const parentData = tree[childSubtree.parentNode.parentNode.id];
       const i = parentData[removeFromList].indexOf(childData);
-      if (i >= 0) {
+      if (i >= 0)
 	parentData[removeFromList].splice(i, 1);
-      }
     }
   }
   childSubtree.remove();
@@ -657,7 +632,7 @@ function addAutomation(select) {
   const fnName = select.value;
   select.value = 'add automation';
   const children = select.parentNode.getElementsByClassName('children')[0];
-  const newChild = cloneNewID(document.getElementById(fnName + '-template'));
+  const newChild = cloneNewID(document.getElementById(`${fnName}-template`));
   children.appendChild(newChild);
   const numArgs = newChild.getElementsByTagName('input').length;
   const childData = {
@@ -679,9 +654,8 @@ function moveAutomation(button) {
   const i = parentData.automation.indexOf(data);
   if (dir == '↑') {
     const prev = li.previousElementSibling;
-    if (prev) {
+    if (prev)
       li.parentNode.insertBefore(li, prev);
-    }
     if (i > 0) {
       const tmp = parentData.automation[i];
       parentData.automation[i] = parentData.automation[i-1];
@@ -706,9 +680,8 @@ function updatePeriodicWave(table) {
   const data = tree[subtree.id];
   const valueExprs = [];
   // NodeList, y u no have map?
-  for (const input of table.querySelectorAll('input')) {
+  for (const input of table.querySelectorAll('input'))
     valueExprs.push(input.value);
-  }
   const select = subtree.querySelector("select[name='type']");
   if (valueExprs.length == 0) { // no PeriodicWave
     // reenable the select and set it to the default value, if we had a
@@ -740,7 +713,7 @@ function changePeriodicWaveValue(input) {
     updatePeriodicWave(table);
   } catch (ex) {
     console.error(ex);
-    alert('invalid PeriodicWave value: ' + ex.message);
+    alert(`invalid PeriodicWave value: ${ex.message}`);
     // set the input value back to what it was
     const subtree = table.parentNode.parentNode.parentNode.parentNode;
     const data = tree[subtree.id];
@@ -762,7 +735,7 @@ function addPeriodicWaveRow(button) {
     updatePeriodicWave(table);
   } catch (ex) {
     console.error(ex);
-    alert('something went wrong adding a PeriodicWave row: ' + ex.message);
+    alert(`something went wrong adding a PeriodicWave row: ${ex.message}`);
   }
 }
 
@@ -777,13 +750,14 @@ function removePeriodicWaveRow(button) {
       updatePeriodicWave(table);
     } catch (ex) {
       console.error(ex);
-      alert('something went wrong removing a PeriodicWave row: ' + ex.message);
+      alert(`something went wrong removing a PeriodicWave row: ${ex.message}`);
     }
   }
 }
 
 function makeValueFn(valueExpr, expectedType) {
-  if (!expectedType) { expectedType = 'value'; }
+  if (!expectedType)
+    expectedType = 'value';
   let jsValueExpr;
   switch (expectedType) {
     // case 'AudioBuffer': // TODO?
@@ -800,8 +774,8 @@ function makeValueFn(valueExpr, expectedType) {
       }
       jsValueExpr =
         'ctx.createPeriodicWave(' +
-	  'new Float32Array([' + real.join(', ') + ']), ' +
-	  'new Float32Array([' + imag.join(', ') + '])' +
+	  `new Float32Array([${real.join(', ')}]), ` +
+	  `new Float32Array([${imag.join(', ')}])` +
 	')';
       break;
     }
@@ -811,12 +785,12 @@ function makeValueFn(valueExpr, expectedType) {
       jsValueExpr = ValueParser.parse(''+valueExpr, {startRule: expectedType});
       break;
     default:
-      throw new Error('unknown expression type: ' + expectedType);
+      throw new Error(`unknown expression type: ${expectedType}`);
   }
   return eval(
-    "(function({ n, f, v, o, r }) {\n" +
-    "  return (" + jsValueExpr + ");\n" +
-    "})\n"
+    '(function({ n, f, v, o, r }) {\n' +
+    `  return (${jsValueExpr});\n` +
+    '})\n'
   );
 }
 
@@ -827,7 +801,7 @@ function changeLabel(input) {
   if (subtree.matches('.reference')) { // ... on a reference
     // ensure that the new label actually refers to an existing node
     if (!(input.value in tree)) {
-      alert('there is nothing labeled "' + input.value + '" to refer to');
+      alert(`there is nothing labeled "${input.value}" to refer to`);
       input.value = oldLabel;
       return;
     }
@@ -835,13 +809,10 @@ function changeLabel(input) {
     // ensure that we can look up the data by its (nonempty) label in tree,
     // and that any references to this node continue to reference this node
     const references = [];
-    if (oldLabel && oldLabel != '') {
-      for (const id in tree) {
-	if (tree[id].type == 'reference' && tree[id].label == oldLabel) {
+    if (oldLabel && oldLabel != '')
+      for (const id in tree)
+	if (tree[id].type == 'reference' && tree[id].label == oldLabel)
 	  references.push(tree[id]);
-	}
-      }
-    }
     if (input.value == '') {
       if (references.length > 0) {
 	alert('node is still referenced, cannot remove its label');
@@ -850,7 +821,7 @@ function changeLabel(input) {
       }
     } else {
       if (input.value in tree) {
-	alert('there is already something labeled "' + input.value + '"');
+	alert(`there is already something labeled "${input.value}"`);
 	input.value = oldLabel;
 	return;
       }
@@ -872,7 +843,7 @@ function changeCondition(input) {
     data.valueFn = makeValueFn(input.value, 'condition');
     data.value = input.value;
   } catch (ex) {
-    alert('invalid condition: ' + ex.message);
+    alert(`invalid condition: ${ex.message}`);
     input.value = data.value;
   }
 }
@@ -898,7 +869,7 @@ function changeFieldValue(input) {
 	break;
     }
   } catch (ex) {
-    alert('invalid field value: ' + ex.message);
+    alert(`invalid field value: ${ex.message}`);
     input.value = field.value;
   }
 }
@@ -909,7 +880,7 @@ function changeParamValue(input) {
     tree[subtree.id].valueFn = makeValueFn(input.value);
     tree[subtree.id][input.name] = input.value;
   } catch (ex) {
-    alert('invalid parameter value: ' + ex.message);
+    alert(`invalid parameter value: ${ex.message}`);
     input.value = tree[subtree.id][input.name];
   }
 }
@@ -918,16 +889,15 @@ function changeArg(input) {
   let i = 0;
   let sib = input.previousElementSibling;
   while (sib) {
-    if (sib.tagName == 'INPUT') {
+    if (sib.tagName == 'INPUT')
       i++;
-    }
     sib = sib.previousElementSibling;
   }
   try {
     tree[input.parentNode.id].argFns[i] = makeValueFn(input.value);
     tree[input.parentNode.id].args[i] = input.value;
   } catch (ex) {
-    alert('invalid argument value: ' + ex.message);
+    alert(`invalid argument value: ${ex.message}`);
     input.value = tree[input.parentNode.id].args[i];
   }
 }
@@ -1030,7 +1000,7 @@ function startInputSource() {
   } else {
     return navigator.mediaDevices.
       getUserMedia({ audio: { channelCount: { exact: 2 } } }).
-      then((stream) => {
+      then(stream => {
 	inputStream = stream;
 	inputSource = ctx.createMediaStreamSource(stream);
 	return inputSource;
@@ -1050,11 +1020,10 @@ function recordBuffer(button) {
   button.className = 'stop';
   button.setAttribute('onclick', 'stopRecordingBuffer(this)');
   // TODO? push some of this into RecorderNode
-  startInputSource().then((source) => {
+  startInputSource().then(source => {
     let sampleRate = inputStream.getTracks()[0].getSettings().sampleRate;
-    if (!('number' == typeof sampleRate)) {
+    if (!('number' == typeof sampleRate))
       sampleRate = ctx.sampleRate;
-    }
     recorderNode = new RecorderNode(ctx, sampleRate);
     recorderNode.connectFrom(inputSource);
     recorderNode.connect(ctx.destination);
@@ -1070,11 +1039,11 @@ function stopRecordingBuffer(button) {
   button.setAttribute('onclick', 'recordBuffer(this)');
   stopInputSource();
   recorderNode.disconnect();
-  recorderNode.getBuffer().then((buffer) => {
+  recorderNode.getBuffer().then(buffer => {
     nodeData.fields.buffer.value = buffer;
     drawBuffer(canvas, buffer);
     recorderNode = null;
-  }).catch((err) => {
+  }).catch(err => {
     console.log('error getting recording buffer:');
     console.error(err);
   });
@@ -1098,7 +1067,8 @@ function drawBuffer(canvas, buffer) {
   const columnImageData = gctx.createImageData(1, h);
   const columnPixels = columnImageData.data;
   // set 100% opacity for all pixels
-  for (let y = 0; y < h; y++) { columnPixels[4*y+3] = 255; }
+  for (let y = 0; y < h; y++)
+    columnPixels[4*y+3] = 255;
   const waveformWidth =
     Math.min(w, Math.floor(buffer.length / numSamplesPerChannelColumn));
   // find the range of sample values for the whole buffer
@@ -1114,8 +1084,8 @@ function drawBuffer(canvas, buffer) {
       buffer.copyFromChannel(channelSamples, c, startInChannel);
     }
     for (let s = 0; s < numSamplesPerColumn; s++) {
-      if (minSample > columnSamples[s]) { minSample = columnSamples[s]; }
-      if (maxSample < columnSamples[s]) { maxSample = columnSamples[s]; }
+      if (minSample > columnSamples[s]) minSample = columnSamples[s];
+      if (maxSample < columnSamples[s]) maxSample = columnSamples[s];
     }
   }
   const sampleRange = maxSample - minSample;
@@ -1138,11 +1108,9 @@ function drawBuffer(canvas, buffer) {
     }
     // find the maximum count for any histogram bin in this column
     let maxThisColumn = 0;
-    for (let y = 0; y < h; y++) {
-      if (columnHistogram[y] > maxThisColumn) {
+    for (let y = 0; y < h; y++)
+      if (columnHistogram[y] > maxThisColumn)
 	maxThisColumn = columnHistogram[y];
-      }
-    }
     // turn the histogram bins into green pixels of corresponding intensity
     for (let y = 0; y < h; y++) {
       columnPixels[4*y+1] = columnHistogram[y] * 255 / maxThisColumn;
@@ -1157,7 +1125,7 @@ function drawBuffer(canvas, buffer) {
 function loadBuffer(audioBufferLI, arrayBuffer, fieldData) {
   const canvas = audioBufferLI.querySelector('.waveform');
   if (fieldData === undefined) {
-				  // ul.children li ABSN    id
+				    // ul.children li ABSN    id
     const nodeData = tree[audioBufferLI.parentNode.parentNode.id];
     fieldData = nodeData.fields.buffer;
   }
@@ -1169,7 +1137,7 @@ function loadBuffer(audioBufferLI, arrayBuffer, fieldData) {
 }
 
 function loadBufferFromFile(input) {
-		   // input label      li buffer
+		     // input label      li buffer
   const audioBufferLI = input.parentNode.parentNode;
   const file = input.files[0];
   const reader = new FileReader();
@@ -1187,14 +1155,14 @@ function loadBufferFromFile(input) {
 function loadBufferFromURL(button) {
   const input = button.previousElementSibling;
   const audioBufferLI = button.parentNode;
-  fetch(input.value).then(response => {
-    return response.arrayBuffer().
+  fetch(input.value).then(response =>
+    response.arrayBuffer().
       then(arrayBuffer => {
 	loadBuffer(audioBufferLI, arrayBuffer);
-      });
-  }).catch(err => {
+      })
+  ).catch(err => {
     console.error(err);
-    alert('error fetching file:' + err);
+    alert(`error fetching file: ${err}`);
   });
 }
 
@@ -1203,9 +1171,9 @@ function loadBufferFromURL(button) {
 function encodeWav(audioBuffer) {
   const numDataBytes = 2 * audioBuffer.numberOfChannels * audioBuffer.length;
   const wavHeader = "RIFF    WAVEfmt                     data    ";
-  const wavBytes =
-    new Uint8Array(wavHeader.length + numDataBytes);
-  for (const i in wavHeader) { wavBytes[i] = wavHeader.charCodeAt(i); }
+  const wavBytes = new Uint8Array(wavHeader.length + numDataBytes);
+  for (const i in wavHeader)
+    wavBytes[i] = wavHeader.charCodeAt(i);
   const wavView = new DataView(wavBytes.buffer);
   wavView.setUint32(4, 36 + numDataBytes, true); // length of rest of file
   wavView.setUint32(16, 16, true); // length of rest of "fmt " chunk
@@ -1262,7 +1230,8 @@ function saveBuffer(button) {
 
 function nodeToJSON(nodeData) {
   const json = { type: nodeData.type };
-  if ('label' in nodeData) json.label = nodeData.label;
+  if ('label' in nodeData)
+    json.label = nodeData.label;
   if ('fields' in nodeData) { // and params
     json.fields = {};
     for (const field in nodeData.fields) {
@@ -1281,26 +1250,19 @@ function nodeToJSON(nodeData) {
     for (const param in nodeData.params) {
       json.params[param] = {
 	value: nodeData.params[param].value,
-	automation: nodeData.params[param].automation.map(autoData => {
-	  return {
-	    fn: autoData.fn,
-	    args: autoData.args
-	  };
-	}),
-	children: nodeData.params[param].children.map(childData => {
-	  return childData.subtree.id;
-	})
+	automation: nodeData.params[param].automation.map(autoData => ({
+	  fn: autoData.fn,
+	  args: autoData.args
+	})),
+	children: nodeData.params[param].children.
+		  map(childData => childData.subtree.id)
       };
     }
   }
-  if ('children' in nodeData) {
-    json.children = nodeData.children.map(childData => {
-      return childData.subtree.id;
-    });
-  }
-  if ('value' in nodeData) { // conditional
+  if ('children' in nodeData)
+    json.children = nodeData.children.map(childData => childData.subtree.id);
+  if ('value' in nodeData) // conditional
     json.value = nodeData.value;
-  }
   return json;
 }
 
@@ -1317,7 +1279,7 @@ function nodeFromJSON(json) {
   if ('fields' in json) { // and params
     for (const field in json.fields) {
       if (!(field in nodeData.fields)) {
-	console.warn('missing ' + json.type + '#' + field + ' field; skipping');
+	console.warn(`missing ${json.type}#${field} field; skipping`);
 	continue;
       }
       const fieldData = nodeData.fields[field];
@@ -1372,13 +1334,13 @@ function nodeFromJSON(json) {
 	}
 	fieldData.value = val;
       } catch (ex) {
-	console.warn('invalid field value ' + JSON.stringify(val) + ', using default:');
+	console.warn(`invalid field value ${JSON.stringify(val)}, using default:`);
 	console.warn(ex);
       }
     }
     for (const param in json.params) {
       if (!(param in nodeData.params)) {
-	console.warn('missing ' + json.type + '#' + param + ' param; skipping');
+	console.warn(`missing ${json.type}#${param} param; skipping`);
 	continue;
       }
       const paramData = nodeData.params[param];
@@ -1388,16 +1350,15 @@ function nodeFromJSON(json) {
 	paramData.value = val;
 	paramData.subtree.getElementsByClassName('value')[0].value = val;
       } catch (ex) {
-	console.warn('invalid parameter value ' + JSON.stringify(val) + ', using default');
+	console.warn(`invalid parameter value ${JSON.stringify(val)}, using default`);
 	console.warn(ex);
       }
       for (const a of json.params[param].automation) {
 	addAutomation({ value: a.fn, parentNode: paramData.subtree });
 	const autoData = paramData.automation[paramData.automation.length - 1];
 	const argInputs = autoData.subtree.getElementsByClassName('value');
-	if (argInputs.length != a.args.length) {
-	  console.warn('wrong number of arguments for automation ' + a.fn + '; expected ' + argInputs.length + ', but got ' + a.args.length);
-	}
+	if (argInputs.length != a.args.length)
+	  console.warn(`wrong number of arguments for automation ${a.fn}; expected ${argInputs.length}, but got ${a.args.length}`);
 	for (let i = 0; i < argInputs.length && i < a.args.length; i++) {
 	  const val = a.args[i];
 	  try {
@@ -1405,7 +1366,7 @@ function nodeFromJSON(json) {
 	    autoData.args[i] = val;
 	    argInputs[i].value = val;
 	  } catch (ex) {
-	    console.warn('invalid argument value ' + JSON.stringify(val) + ':');
+	    console.warn(`invalid argument value ${JSON.stringify(val)}:`);
 	    console.warn(ex);
 	  }
 	}
@@ -1414,16 +1375,15 @@ function nodeFromJSON(json) {
       nodeData.params[param].children = json.params[param].children;
     }
   }
-  if ('children' in json) {
+  if ('children' in json)
     nodeData.children = json.children; // for now; buildLoadedTree will finish
-  }
   if ('value' in json) { // conditional
     const val = json.value;
     try {
       nodeData.valueFn = makeValueFn(val, 'condition');
       nodeData.value = val;
     } catch (ex) {
-      console.warn('invalid condition ' + JSON.stringify(val) + ':');
+      console.warn(`invalid condition ${JSON.stringify(val)}:`);
       console.warn(ex);
     }
   }
@@ -1432,9 +1392,8 @@ function nodeFromJSON(json) {
 
 function buildLoadedTree(nodeData) {
   // recurse on params
-  for (const param in nodeData.params) {
+  for (const param in nodeData.params)
     buildLoadedTree(nodeData.params[param]);
-  }
   // replace child IDs with actual child tree data
   nodeData.children = nodeData.children.map(id => tree[id]);
   // add child subtrees to this subtree's children, and recurse
@@ -1498,7 +1457,7 @@ function loadTree(jsonStr) {
     updateSubtree(tree.destination.subtree, true);
   } catch (ex) {
     console.error(ex);
-    alert('error loading file: ' + ex.message);
+    alert(`error loading file: ${ex.message}`);
   }
 }
 
@@ -1513,11 +1472,10 @@ function loadTreeFromFile(input) {
 
 function loadTreeFromURL(button) {
   const input = button.previousElementSibling;
-  fetch(input.value).then(response => {
-    return response.text().then(loadTree);
-  }).catch(err => {
+  fetch(input.value).then(response => response.text().then(loadTree)).
+  catch(err => {
     console.error(err);
-    alert('error fetching file:' + err);
+    alert(`error fetching file: ${err}`);
   });
 }
 
@@ -1529,12 +1487,10 @@ class PlayingNote extends EventTarget {
   constructor(noteNum, velocity, onset) {
     super();
     //console.log('playing note ' + noteNum);
-    if (velocity === undefined) {
+    if (velocity === undefined)
       velocity = 1;
-    }
-    if (onset === undefined) {
+    if (onset === undefined)
       onset = ctx.currentTime;
-    }
     // TODO make octave changeable
     const fractionOfA440 = Math.pow(2.0, (noteNum - 69) / 12) * 2;
     const frequency = fractionOfA440 * 440;
@@ -1548,14 +1504,14 @@ class PlayingNote extends EventTarget {
     this.topNodes = [];
     // instantiate and connect each child of the destination node (their
     // children in turn might get instantiated in promises)
-    tree.destination.children.forEach((c) => {
-      this.instantiateNode(c).then((n) => {
+    for (const c of tree.destination.children) {
+      this.instantiateNode(c).then(n => {
 	if (!this.isEnded) {
 	  this.topNodes.push(n);
 	  n.connect(ctx.destination);
 	}
       });
-    });
+    }
     // wait for everything to be instantiated before connecting references and
     // starting sources
     setTimeout(() => {
@@ -1583,7 +1539,7 @@ class PlayingNote extends EventTarget {
 	return Promise.resolve(inputSource);
       } else {
 	return startInputSource().
-	  then((s) => {
+	  then(s => {
 	    // FIXME this conflates release and end; if the note continues after release, this will still stop the mic at release
 	    if (this.isEnded) { // stopped before we got a chance to start
 	      stopInputSource();
@@ -1617,7 +1573,7 @@ class PlayingNote extends EventTarget {
 	const oldIsPrevCondTrue = window.isPrevCondTrue;
 	window.isPrevCondTrue = false; // no previous conds among children
 	for (const c of nodeData.children)
-	  this.instantiateNode(c).then((n) => { n.connect(audioNode); });
+	  this.instantiateNode(c).then(n => { n.connect(audioNode); });
 	// restore old isPrevCondTrue
 	window.isPrevCondTrue = oldIsPrevCondTrue;
       }
@@ -1625,12 +1581,10 @@ class PlayingNote extends EventTarget {
     } else { // ordinary AudioNode
       const typeData = nodeTypes[nodeData.type];
       const audioNode = ctx[typeData.create]();
-      if (nodeData.label != '') {
+      if (nodeData.label != '')
 	this.audioNodes[nodeData.label] = audioNode;
-      }
-      if (typeData.isScheduled) {
+      if (typeData.isScheduled)
 	this.scheduledNodes.push([audioNode, nodeData]);
-      }
       if (nodeData.type == 'AnalyserNode') {
 	const grandkids = nodeData.subtree.getElementsByClassName('children')[0];
 	const freqCanvas =
@@ -1643,21 +1597,18 @@ class PlayingNote extends EventTarget {
       }
       // save isPrevCondTrue (so nested conditions don't leak out)
       const oldIsPrevCondTrue = window.isPrevCondTrue;
-      for (const fieldName in nodeData.fields) {
+      for (const fieldName in nodeData.fields)
 	// don't set schedule here, and don't set type when a PeriodicWave has
 	// already been set (spec says that's an error)
 	if (!(/^st(art|op)When$/.test(fieldName) ||
 	      (fieldName == 'type' && ('PeriodicWave' in nodeData.fields) &&
-	       nodeData.fields.PeriodicWave.value))) {
+	       nodeData.fields.PeriodicWave.value)))
 	  this.instantiateField(audioNode, fieldName, nodeData);
-	}
-      }
-      for (const paramName in nodeData.params) {
+      for (const paramName in nodeData.params)
 	this.instantiateParam(audioNode, paramName, nodeData);
-      }
       window.isPrevCondTrue = false; // no previous conds among children
       for (const c of nodeData.children)
-	this.instantiateNode(c).then((n) => { n.connect(audioNode); });
+	this.instantiateNode(c).then(n => { n.connect(audioNode); });
       // restore old isPrevCondTrue
       window.isPrevCondTrue = oldIsPrevCondTrue;
       return Promise.resolve(audioNode);
@@ -1670,9 +1621,8 @@ class PlayingNote extends EventTarget {
       window.isPrevCondTrue = false;
       const val = field.valueFn(this.vars);
       if ('set' in field) {
-	if (val !== null) {
+	if (val !== null)
 	  audioNode[field.set](val);
-	}
       } else {
 	audioNode[fieldName] = val;
       }
@@ -1700,7 +1650,7 @@ class PlayingNote extends EventTarget {
     }
     window.isPrevCondTrue = false;
     for (const c of paramData.children)
-      this.instantiateNode(c).then((n) => { n.connect(audioParam); });
+      this.instantiateNode(c).then(n => { n.connect(audioParam); });
   }
 
   instantiateAutomation(audioParam, autoData) {
@@ -1718,13 +1668,11 @@ class PlayingNote extends EventTarget {
       // remove this pair from the list when the audioNode ends
       audioNode.addEventListener('ended', () => {
 	const i = this.scheduledNodes.indexOf(pair);
-	if (i >= 0) {
+	if (i >= 0)
 	  this.scheduledNodes.splice(i, 1);
-	}
 	// if we just removed the last scheduled node, end the whole note
-	if (this.scheduledNodes.length == 0) {
+	if (this.scheduledNodes.length == 0)
 	  this.end();
-	}
       });
       // start the audioNode according to startWhen "field"
       if (/\br\b/.test(nodeData.fields.startWhen.value)) {
@@ -1748,7 +1696,8 @@ class PlayingNote extends EventTarget {
   release(releaseTime) {
     //console.log('releasing note ' + this.vars.n);
     this.vars.r = releaseTime;
-    this.releaseTasks.forEach(fn => { fn(); });
+    for (const fn of this.releaseTasks)
+      fn();
     if (this.scheduledNodes.length == 0 && !this.isEnded) {
       // we have no scheduled nodes to call end() from their 'ended' events,
       // and end() hasn't been called yet, so we must call end() ourselves
@@ -1786,9 +1735,8 @@ class PlayingNote extends EventTarget {
     gctx.fillStyle = 'lime';
     for (let x = 0, i = 0; x < w && i < data.length; x++, i += binsPerCol) {
       let sum = 0;
-      for (let j = 0; j < binsPerCol; j++) {
+      for (let j = 0; j < binsPerCol; j++)
 	sum += data[i+j];
-      }
       const y = Math.floor(sum / binsPerCol);
       gctx.fillRect(x, h - y, 1, y);
     }
@@ -1868,15 +1816,14 @@ forEach((td, i) => {
   const content = td.innerHTML;
   if (content.length == 1) {
     const code = content.toUpperCase().charCodeAt(0);
-    if (isAsciiKeyCode(code)) {
-      td.setAttribute("id", "key_" + code);
-    } else if (content == ',') {
-      td.setAttribute("id", "key_188");
-    } else if (content == '.') {
-      td.setAttribute("id", "key_190");
-    } else if (content == '/') {
-      td.setAttribute("id", "key_191");
-    }
+    if (isAsciiKeyCode(code))
+      td.setAttribute('id', `key_${code}`);
+    else if (content == ',')
+      td.setAttribute('id', 'key_188');
+    else if (content == '.')
+      td.setAttribute('id', 'key_190');
+    else if (content == '/')
+      td.setAttribute('id', 'key_191');
   }
 });
 
@@ -1895,15 +1842,14 @@ function standardKeyCode(evt) {
 document.body.addEventListener('keydown', evt => {
   if (document.activeElement.tagName != 'INPUT') {
     const code = standardKeyCode(evt);
-    const td = document.getElementById("key_" + code);
+    const td = document.getElementById(`key_${code}`);
     if (td) {
       //console.log('keydown ' + code);
       if (!kc2osc[code]) {
 	const noteNum = td.className.slice(0,2);
-	if (/\d\d/.test(noteNum)) {
+	if (/\d\d/.test(noteNum))
 	  kc2osc[code] = new PlayingNote(noteNum);
-	}
-	setTimeout(() => { td.classList.add("keydown"); }, 0);
+	setTimeout(() => { td.classList.add('keydown'); }, 0);
       }
       evt.preventDefault();
     }
@@ -1912,7 +1858,7 @@ document.body.addEventListener('keydown', evt => {
 
 document.body.addEventListener('keyup', evt => {
   const code = standardKeyCode(evt);
-  const td = document.getElementById("key_" + code);
+  const td = document.getElementById(`key_${code}`);
   if (td) {
     //console.log('keyup ' + code);
     const oscillator = kc2osc[code];
@@ -1920,7 +1866,7 @@ document.body.addEventListener('keyup', evt => {
       oscillator.release(ctx.currentTime);
       kc2osc[code] = null;
     }
-    setTimeout(() => { td.classList.remove("keydown"); }, 0);
+    setTimeout(() => { td.classList.remove('keydown'); }, 0);
     evt.preventDefault();
   }
 });
@@ -1961,7 +1907,7 @@ for (const td of document.querySelectorAll('#keyboard td')) {
 	mouseOscillator.addEventListener('ended', () => {
 	  td.classList.remove('keydown');
 	});
-	setTimeout(() => { td.classList.add("keydown"); }, 0);
+	setTimeout(() => { td.classList.add('keydown'); }, 0);
       }
     }
     evt.preventDefault();
@@ -1984,7 +1930,7 @@ function initTouchboard() {
   for (let oct = 0; oct < 10; oct++) {
     const label = labelTemplate.cloneNode();
     label.setAttribute('x', oct * 70);
-    label.appendChild(document.createTextNode('C' + oct));
+    label.appendChild(document.createTextNode(`C${oct}`));
     touchboard.appendChild(label);
     for (let k = 1; k <= 12; k++) {
       const keyTemplate = octaveTemplate.children[k];

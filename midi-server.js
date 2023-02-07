@@ -30,11 +30,12 @@ const wsServer = new WebSocketServer({
 const buffer = Buffer.alloc(3);
 
 function eachMessage(fd, cb, pos) {
-  if (pos === undefined) { pos = 0; }
+  if (pos === undefined)
+    pos = 0;
   fs.read(fd, buffer, pos, 3 - pos, null, (err, bytesRead, buf) => {
     pos += bytesRead;
     if (err) {
-      console.log('read from ' + dev + ' failed');
+      console.log(`read from ${dev} failed`);
       console.log(err);
     } else if (pos == 3) {
       cb(buf);
@@ -44,11 +45,11 @@ function eachMessage(fd, cb, pos) {
   });
 }
 
-wsServer.on('request', (request) => {
+wsServer.on('request', request => {
   console.log('received ws request');
   if (request.origin != 'http://localhost:11235') {
     request.reject();
-    console.log('bad origin: ' + request.origin);
+    console.log(`bad origin: ${request.origin}`);
     return;
   }
   const connection = request.accept('midi', request.origin);

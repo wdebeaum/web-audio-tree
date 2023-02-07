@@ -22,9 +22,8 @@ if ('AudioWorkletNode' in window) {
     }
   }
 
-  RecorderNode.addModule = (ctx) => {
-    return ctx.audioWorklet.addModule('recorder-processor.js');
-  };
+  RecorderNode.addModule =
+    (ctx) => ctx.audioWorklet.addModule('recorder-processor.js');
 
   window.RecorderNode = RecorderNode;
 
@@ -78,10 +77,9 @@ if ('AudioWorkletNode' in window) {
     }
   }
 
-  RecorderNode.addModule = (ctx) => {
+  RecorderNode.addModule = (ctx) =>
     // do nothing, just resolve immediately
-    return new Promise((resolve, reject) => { resolve(); });
-  };
+    new Promise((resolve, reject) => resolve());
 
   window.RecorderNode = RecorderNode;
 
